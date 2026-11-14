@@ -1,0 +1,15 @@
+.gradle/
+build/
+/local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+# generated at build time by scripts/prepare_assets.sh
+app/src/main/assets/models/
+app/src/main/assets/voice/
+.cache/
+*.jks
+*.keystore
+!app/signing/dev.keystore
