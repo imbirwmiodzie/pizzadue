@@ -1,13 +1,10 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <group android:translateX="30" android:translateY="28">
-        <!-- crust -->
-        <path android:fillColor="#FFD9A05B" android:pathData="M24,0C14.6,0 6.4,3.6 0.6,9.4L4.2,15.6C9,11 16.1,8.2 24,8.2C31.9,8.2 39,11 43.8,15.6L47.4,9.4C41.6,3.6 33.4,0 24,0Z" />
-        <!-- cheese and tomato -->
-        <path android:fillColor="#FFFFB020" android:pathData="M24,8.2C16.1,8.2 9,11 4.2,15.6L24,52L43.8,15.6C39,11 31.9,8.2 24,8.2Z" />
-        <path android:fillColor="#FFFF6B57" android:pathData="M17,20m-3.6,0a3.6,3.6 0,1 1,7.2 0a3.6,3.6 0,1 1,-7.2 0" />
-        <path android:fillColor="#FFFF6B57" android:pathData="M30,18m-3.2,0a3.2,3.2 0,1 1,6.4 0a3.2,3.2 0,1 1,-6.4 0" />
-        <path android:fillColor="#FFFF6B57" android:pathData="M24,33m-3.4,0a3.4,3.4 0,1 1,6.8 0a3.4,3.4 0,1 1,-6.8 0" />
-        <path android:fillColor="#FF5FCF8A" android:pathData="M28,26c2,-2 5,-2 6,-1c-1,2 -4,3 -6,1z" />
+    <group>
+        <!-- wood-fired oven dome that is also a stopwatch: crown on top, clock hand in the dome, flame in the mouth -->
+        <path android:fillColor="#FFFFB020" android:fillType="evenOdd" android:pathData="M24,78L24,60A30,30 0,0 1,84,60L84,78Z M41,78L41,66A13,13 0,0 1,67,66L67,78Z M51,47A3,3 0,1 0,57,47A3,3 0,1 0,51,47Z M55.67,43.45L60.95,37.17L62.49,38.45L57.21,44.73Z" />
+        <path android:fillColor="#FFFFB020" android:pathData="M50,19L58,19A2,2 0,0 1,60,21L60,25L48,25L48,21A2,2 0,0 1,50,19Z M52,25L56,25L56,30.5L52,30.5Z" />
+        <path android:fillColor="#FFFFB020" android:pathData="M54,76C49.6,76 47.5,72.7 48.8,69.2C49.7,66.7 52.1,65.6 52.4,62C55,63.6 56,66.1 55.5,68.2C56.5,67.6 57.1,66.6 57.3,65.4C59.3,67.5 59.9,70.4 58.8,72.8C57.9,74.8 56.2,76 54,76Z" />
+        <path android:fillColor="#FFFFB020" android:pathData="M22,80L86,80A2,2 0,0 1,88,82A2,2 0,0 1,86,84L22,84A2,2 0,0 1,20,82A2,2 0,0 1,22,80Z" />
     </group>
 </vector>

@@ -28,6 +28,11 @@ fun SettingsScreen(s: Settings, voice: VoiceStatus, update: ((Settings) -> Setti
     ) {
         ScreenHeader("Settings", null)
 
+        SectionLabel("Screen")
+        Group {
+            SwitchRow("☀ Always on, full brightness", "while the app is open", s.bright, { v -> update { it.copy(bright = v) } })
+        }
+
         SectionLabel("Dough, % of flour")
         Group {
             StepperRow("Hydration", "water", pct(s.hydration),
@@ -74,16 +79,12 @@ fun SettingsScreen(s: Settings, voice: VoiceStatus, update: ((Settings) -> Setti
             SwitchRow("Gira, gira!", "turn the pizza, at half the bake time", s.gira, { v -> update { it.copy(gira = v) } }) { PlayButton { preview(Clip.GIRA) } }
         }
 
-        SectionLabel("Screen")
-        Group {
-            SwitchRow("Always on, full brightness", "same as ☀ on the Timer tab", s.bright, { v -> update { it.copy(bright = v) } })
-        }
 
         SectionLabel("Voice commands")
         Group {
-            SwitchRow("English", "vai!, pizza out, time left…", s.voiceEn, { v -> update { it.copy(voiceEn = v) } })
+            SwitchRow("English", "start: vai! · waj! · pizza in · start   stop: pizza out · stop", s.voiceEn, { v -> update { it.copy(voiceEn = v) } })
             GroupDivider()
-            SwitchRow("Polski", "start, wyjmij, ile zostało…", s.voicePl, { v -> update { it.copy(voicePl = v) } })
+            SwitchRow("Polski", "start: start   stop: wyjmij · stop · koniec", s.voicePl, { v -> update { it.copy(voicePl = v) } })
         }
         val status = when (voice) {
             is VoiceStatus.Listening -> "Listening, offline."

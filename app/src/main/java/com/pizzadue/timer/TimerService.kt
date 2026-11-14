@@ -97,6 +97,7 @@ class TimerService : Service() {
         }
         acquireWake()
         player.boostVolume()
+        player.startBeep()
         loopJob = scope.launch { runLoop() }
         notifyNow()
     }

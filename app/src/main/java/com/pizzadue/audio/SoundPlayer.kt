@@ -45,6 +45,7 @@ class SoundPlayer private constructor(private val context: Context) {
     private sealed interface Item {
         data class Ticks(val count: Int) : Item
         data object Long : Item
+        data object Start : Item
         data class Voice(val clip: Clip) : Item
     }
 
@@ -56,7 +57,8 @@ class SoundPlayer private constructor(private val context: Context) {
     private val audioManager = context.getSystemService(AudioManager::class.java)
     private val shortTrack = staticTrack(ToneSynth.shortTick())
     private val longTrack = staticTrack(ToneSynth.longTick())
-    private val enhancers = listOfNotNull(enhance(shortTrack.audioSessionId), enhance(longTrack.audioSessionId))
+    private val startTrack = staticTrack(ToneSynth.startBeep())
+    private val enhancers = listOf(shortTrack, longTrack, startTrack).mapNotNull { enhance(it.audioSessionId) }
 
     private val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= 31) {
         context.getSystemService(VibratorManager::class.java)?.defaultVibrator
@@ -87,6 +89,10 @@ class SoundPlayer private constructor(private val context: Context) {
                         hit(longTrack, vibrateMs = 450, flashMs = 400)
                         delay(550)
                     }
+                    Item.Start -> {
+                        hit(startTrack, vibrateMs = 700, flashMs = 700)
+                        delay(800)
+                    }
                     is Item.Voice -> playVoice(item.clip)
                 }
             }
@@ -95,6 +101,7 @@ class SoundPlayer private constructor(private val context: Context) {
 
     fun ticks(count: Int) { queue.trySend(Item.Ticks(count)) }
     fun longTick() { queue.trySend(Item.Long) }
+    fun startBeep() { queue.trySend(Item.Start) }
     fun voice(clip: Clip) { queue.trySend(Item.Voice(clip)) }
 
     /** Drops everything queued and cuts off a voice clip that is playing. Call on the main thread. */

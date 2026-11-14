@@ -23,7 +23,7 @@ data class Settings(
     val gira: Boolean = true,
     val bright: Boolean = true,
     val maxVolume: Boolean = true,
-    val vibrate: Boolean = true,
+    val vibrate: Boolean = false,
     val flash: Boolean = false,
     val voiceEn: Boolean = true,
     val voicePl: Boolean = true,
@@ -56,7 +56,7 @@ class SettingsRepository(context: Context) {
         val gira = booleanPreferencesKey("gira")
         val bright = booleanPreferencesKey("bright")
         val maxVolume = booleanPreferencesKey("max_volume")
-        val vibrate = booleanPreferencesKey("vibrate")
+        val vibrate = booleanPreferencesKey("vibrate_v2")
         val flash = booleanPreferencesKey("flash")
         val voiceEn = booleanPreferencesKey("voice_en")
         val voicePl = booleanPreferencesKey("voice_pl")

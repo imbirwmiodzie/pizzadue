@@ -26,7 +26,6 @@ fun App(vm: MainViewModel) {
     val tab by vm.tab.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val timer by vm.timer.collectAsStateWithLifecycle()
-    val heard by vm.heard.collectAsStateWithLifecycle()
     val voice by vm.voiceStatus.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -43,14 +42,13 @@ fun App(vm: MainViewModel) {
         Box(Modifier.fillMaxSize().padding(pad)) {
             when (tab) {
                 AppTab.TIMER -> TimerScreen(
-                    timer, settings, heard, voice,
+                    timer, settings, voice,
                     TimerActions(
                         selectMode = vm::selectMode,
                         setDuration = vm::setDuration,
                         main = { if (timer.isActive || timer.phase == Phase.DONE) vm.stop() else vm.startCurrent() },
                         pauseResume = { if (timer.phase == Phase.PAUSED) vm.resume() else vm.pause() },
                         stop = vm::stop,
-                        toggleBright = { vm.updateSettings { it.copy(bright = !it.bright) } },
                     ),
                 )
                 AppTab.DOUGH -> DoughScreen(settings, voice, vm::updateSettings) { vm.selectTab(AppTab.SETTINGS) }

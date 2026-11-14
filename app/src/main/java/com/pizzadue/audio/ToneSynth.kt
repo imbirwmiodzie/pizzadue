@@ -26,6 +26,12 @@ object ToneSynth {
         env * (sin(2 * PI * 2000 * t) + 0.7 * sin(2 * PI * 3000 * t) + 0.4 * sin(2 * PI * 4000 * t))
     }
 
+    /** Start beep: a steady 700 ms tone, so "the timer is running" is unmistakable. */
+    fun startBeep(): ShortArray = render(0.700) { t ->
+        val env = attack(t, 0.010) * min(1.0, (0.700 - t) / 0.040)
+        env * (sin(2 * PI * 2600 * t) + 0.5 * sin(2 * PI * 5200 * t))
+    }
+
     private fun attack(t: Double, len: Double) = min(1.0, t / len)
 
     private inline fun render(seconds: Double, wave: (Double) -> Double): ShortArray {
