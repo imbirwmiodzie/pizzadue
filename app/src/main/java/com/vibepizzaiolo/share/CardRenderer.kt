@@ -48,6 +48,12 @@ object CardRenderer {
     private const val PAPER = 0xFFF6F1E7.toInt()
     private const val PAPER_MUTED = 0xFF6B5F4E.toInt()
     private const val PAPER_TEXT = 0xFF4A4237.toInt()
+    private const val GOLD = 0xFFE9A825.toInt()
+    private const val GOLD_DARK = 0xFF8A5A10.toInt()
+    private const val SEAL_RED = 0xFFB71C1C.toInt()
+    private const val IT_GREEN = 0xFF009246.toInt()
+    private const val IT_WHITE = 0xFFF8F5EE.toInt()
+    private const val IT_RED = 0xFFCE2B37.toInt()
 
     // the app icon: oven dome that is also a stopwatch (same paths as the launcher icon)
     private val logo: List<Path> by lazy {
@@ -90,18 +96,89 @@ object CardRenderer {
         text(c, "IN THE OVEN", m, bottom - 196f, mono(36f, true, 0.12f), FLAME)
         text(c, clock(info.bakeMs), m - 6f, bottom - 6f, mono(200f, true, -0.03f), FG)
 
-        // round stamp
-        val r = 160f
-        val cx = w - m - r
-        val cy = bottom - r
+        // Italian quality seal, bottom right
+        val r = 175f
+        qualitySeal(c, w - m - r * 0.95f, bottom - r * 1.4f, r, info)
+    }
+
+    /**
+     * A gold rosette like the seals on Italian food labels: "FATTA A MANO" round the top, "con amore"
+     * and "QUALITÀ SUPERIORE" on a red disc (hand-made with love, superior quality), the app's name
+     * round the bottom, and ribbon tails in the Italian colours.
+     */
+    private fun qualitySeal(c: Canvas, cx: Float, cy: Float, r: Float, info: CardInfo) {
         c.save()
-        c.rotate(-12f, cx, cy)
-        c.drawCircle(cx, cy, r, fill(FLAME))
-        c.drawCircle(cx, cy, r * 0.65f, Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 5f; color = INK })
-        val ring = Path().apply { addCircle(cx, cy, r * 0.81f, Path.Direction.CW) }
-        c.drawTextOnPath("VIBEPIZZAIOLO · SAY VAI! · TIMED BY VOICE ·", ring, 0f, 9f, mono(25f, true, 0.1f).apply { color = INK })
-        drawLogo(c, cx - 60f, cy - 62f, 120f, INK)
+        c.rotate(-10f, cx, cy)
+
+        // ribbon tails, behind the seal
+        val tailW = r * 0.42f
+        val tailH = r * 1.0f
+        val tailTop = cy + r * 0.35f
+        for (side in listOf(-1f, 1f)) {
+            c.save()
+            c.rotate(side * 20f, cx, tailTop)
+            val left = cx + side * r * 0.3f - tailW / 2
+            val tail = Path().apply {
+                moveTo(left, tailTop)
+                lineTo(left + tailW, tailTop)
+                lineTo(left + tailW, tailTop + tailH)
+                lineTo(left + tailW / 2, tailTop + tailH - tailW * 0.4f)
+                lineTo(left, tailTop + tailH)
+                close()
+            }
+            c.clipPath(tail)
+            val stripe = tailW / 3
+            listOf(IT_GREEN, IT_WHITE, IT_RED).forEachIndexed { i, col ->
+                c.drawRect(left + i * stripe, tailTop, left + (i + 1) * stripe, tailTop + tailH, fill(col))
+            }
+            c.restore()
+        }
+
+        // scalloped gold edge
+        c.drawCircle(cx + r * 0.03f, cy + r * 0.05f, r, fill(0x55000000)) // soft shadow
+        val bumps = 30
+        for (i in 0 until bumps) {
+            val a = Math.PI * 2 * i / bumps
+            c.drawCircle(cx + (r * 0.9f * Math.cos(a)).toFloat(), cy + (r * 0.9f * Math.sin(a)).toFloat(), r * 0.115f, fill(GOLD))
+        }
+        c.drawCircle(cx, cy, r * 0.92f, fill(GOLD))
+        val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = GOLD_DARK }
+        line.strokeWidth = r * 0.025f
+        c.drawCircle(cx, cy, r * 0.86f, line)
+        c.drawCircle(cx, cy, r * 0.6f, fill(SEAL_RED))
+        line.strokeWidth = r * 0.03f
+        c.drawCircle(cx, cy, r * 0.6f, line)
+
+        // ring text: upright on top, readable from below at the bottom
+        val ringPaint = mono(r * 0.15f, true, 0.14f).apply { color = INK }
+        val top = Path().apply { addArc(RectF(cx - r * 0.66f, cy - r * 0.66f, cx + r * 0.66f, cy + r * 0.66f), 180f, 180f) }
+        arcText(c, "FATTA A MANO", top, Math.PI.toFloat() * r * 0.66f, mono(r * 0.17f, true, 0.18f).apply { color = INK })
+        val bottomArc = Path().apply { addArc(RectF(cx - r * 0.78f, cy - r * 0.78f, cx + r * 0.78f, cy + r * 0.78f), 180f, -180f) }
+        arcText(c, "VIBEPIZZAIOLO", bottomArc, Math.PI.toFloat() * r * 0.78f, ringPaint)
+        val star = display(r * 0.14f).apply { color = INK; textAlign = Paint.Align.CENTER }
+        c.drawText("★", cx - r * 0.73f, cy + r * 0.05f, star)
+        c.drawText("★", cx + r * 0.73f, cy + r * 0.05f, star)
+
+        // centre
+        val center = Paint.Align.CENTER
+        c.drawText("QUALITÀ", cx, cy - r * 0.02f, display(r * 0.22f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.04f })
+        c.drawText("SUPERIORE", cx, cy + r * 0.19f, display(r * 0.155f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.06f })
+        c.drawText("Nº ${info.pizzaNo}", cx, cy + r * 0.4f, mono(r * 0.12f, true).apply { color = GOLD; textAlign = center })
+        c.drawText("con amore", cx, cy - r * 0.25f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD_ITALIC)
+            textSize = r * 0.13f
+            color = GOLD
+            textAlign = center
+        })
+
         c.restore()
+    }
+
+    /** Text centred along an arc of [arcLength]. */
+    private fun arcText(c: Canvas, s: String, path: Path, arcLength: Float, p: Paint) {
+        p.textAlign = Paint.Align.LEFT
+        val offset = ((arcLength - p.measureText(s)) / 2).coerceAtLeast(0f)
+        c.drawTextOnPath(s, path, offset, 0f, p)
     }
 
     private fun sheet(c: Canvas, photo: Bitmap, f: Format, info: CardInfo) {
