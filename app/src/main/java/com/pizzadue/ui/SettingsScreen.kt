@@ -77,6 +77,13 @@ fun SettingsScreen(
 
         SectionLabel("Loudness")
         Group {
+            SwitchRow(
+                "Play as alarm",
+                if (s.asAlarm) "on: alarm volume, plays even on silent, always from the phone's speaker"
+                else "off: media volume, plays through Bluetooth or headphones like music",
+                s.asAlarm, { v -> update { it.copy(asAlarm = v) } },
+            )
+            GroupDivider()
             SwitchRow("Night mode", "quiet: at most 15% and vibration on", s.night, { v -> update { it.copy(night = v) } })
             GroupDivider()
             VolumeRow(s.volume, onChange = { v -> update { it.copy(volume = v) } }, onDone = previewVolume)
@@ -105,7 +112,7 @@ fun SettingsScreen(
         val status = when (voice) {
             is VoiceStatus.Listening -> "Listening, offline."
             VoiceStatus.Preparing -> "Preparing the speech models (first start only)…"
-            VoiceStatus.NoPermission -> "Microphone permission is off. Allow it in Android settings → Apps → PizzaDue."
+            VoiceStatus.NoPermission -> "Microphone permission is off. Allow it in Android settings → Apps → VibePizzaiolo."
             is VoiceStatus.Error -> voice.message
             VoiceStatus.Off -> "Voice is off."
         }
@@ -130,7 +137,7 @@ private fun VolumeRow(percent: Int, onChange: (Int) -> Unit, onDone: () -> Unit)
             steps = 18,
             colors = SliderDefaults.colors(thumbColor = Pal.flame, activeTrackColor = Pal.flame, inactiveTrackColor = Pal.line),
         )
-        Text("Beeps use the alarm sound, so they play even when the phone is on silent. The phone's volume buttons change it while the app is open.", color = Pal.muted, fontSize = 12.sp)
+        Text("The phone's volume buttons also change it while the app is open.", color = Pal.muted, fontSize = 12.sp)
     }
 }
 

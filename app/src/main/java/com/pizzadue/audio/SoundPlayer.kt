@@ -46,6 +46,29 @@ class SoundPlayer private constructor(private val context: Context) {
     @Volatile var night = false
         set(v) { field = v; if (timerHold) applyVolume() }
 
+    /**
+     * true: alarm sound (own volume, plays on silent and through the phone's speaker even with
+     * headphones). false: media sound (media volume, goes to Bluetooth / headphones like music).
+     */
+    var asAlarm = true
+        set(v) {
+            if (field == v) return
+            val held = timerHold
+            restoreVolume()
+            field = v
+            buildTracks()
+            if (held) applyVolume()
+        }
+
+    /** Takes over everything the player needs from Settings. */
+    fun configure(s: com.pizzadue.settings.Settings) {
+        vibrate = s.vibrate
+        flash = s.flash
+        asAlarm = s.asAlarm
+        volumePct = s.volume
+        night = s.night
+    }
+
     private val effectivePct get() = if (night) minOf(volumePct, NIGHT_PCT) else volumePct
     private val shouldVibrate get() = vibrate || night
 
@@ -61,17 +84,38 @@ class SoundPlayer private constructor(private val context: Context) {
         data class Voice(val clip: Clip) : Item
     }
 
-    private val attrs = AudioAttributes.Builder()
+    private val alarmAttrs = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_ALARM)
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
         .build()
+    private val mediaAttrs = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_MEDIA)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build()
+    private val attrs get() = if (asAlarm) alarmAttrs else mediaAttrs
+    private val stream get() = if (asAlarm) AudioManager.STREAM_ALARM else AudioManager.STREAM_MUSIC
 
     private val audioManager = context.getSystemService(AudioManager::class.java)
-    private val shortTrack = staticTrack(ToneSynth.shortTick())
-    private val longTrack = staticTrack(ToneSynth.longTick())
-    private val startTrack = staticTrack(ToneSynth.startBeep())
-    private val tracks = listOf(shortTrack, longTrack, startTrack)
-    private val enhancers = tracks.mapNotNull { enhance(it.audioSessionId, gainMb = 0) }
+    private val shortPcm = ToneSynth.shortTick()
+    private val longPcm = ToneSynth.longTick()
+    private val startPcm = ToneSynth.startBeep()
+    private lateinit var shortTrack: AudioTrack
+    private lateinit var longTrack: AudioTrack
+    private lateinit var startTrack: AudioTrack
+    private var tracks: List<AudioTrack> = emptyList()
+    private var enhancers: List<LoudnessEnhancer> = emptyList()
+
+    /** (Re)creates the tick sounds on the current sound type (alarm or media). */
+    private fun buildTracks() {
+        enhancers.forEach { runCatching { it.release() } }
+        tracks.forEach { runCatching { it.release() } }
+        shortTrack = staticTrack(shortPcm)
+        longTrack = staticTrack(longPcm)
+        startTrack = staticTrack(startPcm)
+        tracks = listOf(shortTrack, longTrack, startTrack)
+        enhancers = tracks.mapNotNull { enhance(it.audioSessionId, gainMb = 0) }
+        tracks.forEach { runCatching { it.setVolume(gain) } }
+    }
 
     private val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= 31) {
         context.getSystemService(VibratorManager::class.java)?.defaultVibrator
@@ -85,12 +129,14 @@ class SoundPlayer private constructor(private val context: Context) {
         }
     }.getOrNull()
 
-    private var savedAlarmVolume: Int? = null
+    /** The user's own volume before we changed it, and on which stream. */
+    private var savedVolume: Pair<Int, Int>? = null
 
     private val queue = Channel<Item>(Channel.UNLIMITED)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     init {
+        buildTracks()
         scope.launch {
             for (item in queue) {
                 when (item) {
@@ -162,10 +208,11 @@ class SoundPlayer private constructor(private val context: Context) {
     private fun applyVolume() {
         val p = effectivePct.coerceIn(5, 100) / 100f
         runCatching {
-            if (savedAlarmVolume == null) savedAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
-            val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            val st = stream
+            if (savedVolume == null) savedVolume = st to audioManager.getStreamVolume(st)
+            val max = audioManager.getStreamMaxVolume(st)
             val level = kotlin.math.ceil(max * p).toInt().coerceIn(1, max)
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, level, 0)
+            audioManager.setStreamVolume(st, level, 0)
             gain = (p * max / level).coerceIn(0.02f, 1f)
         }
         boostMb = if (p > 0.8f) ((p - 0.8f) / 0.2f * 800).toInt() else 0
@@ -179,9 +226,9 @@ class SoundPlayer private constructor(private val context: Context) {
     }
 
     private fun restoreVolume() {
-        val v = savedAlarmVolume ?: return
-        savedAlarmVolume = null
-        runCatching { audioManager.setStreamVolume(AudioManager.STREAM_ALARM, v, 0) }
+        val (st, v) = savedVolume ?: return
+        savedVolume = null
+        runCatching { audioManager.setStreamVolume(st, v, 0) }
     }
 
     private suspend fun hit(track: AudioTrack, vibrateMs: Long, flashMs: Long) {

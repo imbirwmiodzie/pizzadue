@@ -26,6 +26,8 @@ data class Settings(
     val volume: Int = 40,
     /** Night mode: volume capped low and vibration on, for sleeping neighbours. */
     val night: Boolean = false,
+    /** Play as alarm (true) or as media (false). */
+    val asAlarm: Boolean = true,
     val vibrate: Boolean = false,
     val flash: Boolean = false,
     val voiceEn: Boolean = true,
@@ -61,6 +63,7 @@ class SettingsRepository(context: Context) {
         // new key: earlier installs saved 100%, the new default is 40%
         val volume = intPreferencesKey("volume_v2")
         val night = booleanPreferencesKey("night")
+        val asAlarm = booleanPreferencesKey("as_alarm")
         val vibrate = booleanPreferencesKey("vibrate_v2")
         val flash = booleanPreferencesKey("flash")
         val voiceEn = booleanPreferencesKey("voice_en")
@@ -84,6 +87,7 @@ class SettingsRepository(context: Context) {
             bright = p[K.bright] ?: d.bright,
             volume = p[K.volume] ?: d.volume,
             night = p[K.night] ?: d.night,
+            asAlarm = p[K.asAlarm] ?: d.asAlarm,
             vibrate = p[K.vibrate] ?: d.vibrate,
             flash = p[K.flash] ?: d.flash,
             voiceEn = p[K.voiceEn] ?: d.voiceEn,
@@ -100,7 +104,7 @@ class SettingsRepository(context: Context) {
                 p[K.hydration] ?: d.hydration, p[K.salt] ?: d.salt, p[K.yeast] ?: d.yeast,
                 p[K.bakeSec] ?: d.bakeSec, p[K.preheatSec] ?: d.preheatSec,
                 p[K.ticks] ?: d.ticks, p[K.pronta] ?: d.pronta, p[K.forno] ?: d.forno, p[K.gira] ?: d.gira,
-                p[K.bright] ?: d.bright, p[K.volume] ?: d.volume, p[K.night] ?: d.night, p[K.vibrate] ?: d.vibrate, p[K.flash] ?: d.flash,
+                p[K.bright] ?: d.bright, p[K.volume] ?: d.volume, p[K.night] ?: d.night, p[K.asAlarm] ?: d.asAlarm, p[K.vibrate] ?: d.vibrate, p[K.flash] ?: d.flash,
                 p[K.voiceEn] ?: d.voiceEn, p[K.voicePl] ?: d.voicePl,
                 p[K.balls] ?: d.balls, p[K.ballWeight] ?: d.ballWeight,
             )
@@ -117,6 +121,7 @@ class SettingsRepository(context: Context) {
             p[K.bright] = s.bright
             p[K.volume] = s.volume.coerceIn(5, 100)
             p[K.night] = s.night
+            p[K.asAlarm] = s.asAlarm
             p[K.vibrate] = s.vibrate
             p[K.flash] = s.flash
             p[K.voiceEn] = s.voiceEn

@@ -1,4 +1,4 @@
-# PizzaDue
+# VibePizzaiolo
 
 A voice‑driven pizza timer for Android. Three tabs:
 
@@ -10,7 +10,8 @@ A voice‑driven pizza timer for Android. Three tabs:
 ## Install
 
 Every push to the default branch publishes the newest APK as the **latest** pre‑release:
-open the repository's **Releases** page on your phone, download `pizzadue.apk` and open it.
+open the repository's **Releases** page on your phone, download `vibepizzaiolo.apk` and open it
+(`pizzadue.apk`, the old name, is the same file).
 Android asks once to allow installing apps from your browser.
 
 Each workflow run also keeps the APKs as a downloadable artifact (Actions tab → run → Artifacts).
@@ -24,7 +25,8 @@ A long beep marks every start. Bake (counted from “vai!”): 1 short tick at :
 Preheat: silent except 1 tick at ⅓, 2 ticks at ⅔, 3 ticks at the end, then “Forno a legna caldo” every 30 s
 until you say “vai!” or stop it. The timer then switches to Bake.
 
-Loudness: everything plays on the alarm stream, so it is heard even when the phone is on silent. **Beep volume**
+Loudness: by default everything plays as an alarm sound, so it is heard even when the phone is on silent and always
+comes from the phone's speaker; **Play as alarm** off switches to media sound (media volume, Bluetooth/headphones). **Beep volume**
 (Settings, 5–100%, default 40%) sets the level while a timer runs and your own alarm volume comes back afterwards;
 below the alarm's lowest step the app lowers the sound itself, so 5% is really quiet, and the loudness boost only
 works above 80%. **Night mode** caps it at 15% and turns vibration on. The phone's volume buttons also change it

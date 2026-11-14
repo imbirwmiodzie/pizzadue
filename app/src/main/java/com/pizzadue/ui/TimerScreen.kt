@@ -77,7 +77,7 @@ fun TimerScreen(state: TimerState, settings: Settings, voice: VoiceStatus, a: Ti
         Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ScreenHeader("PizzaDue", voice)
+        ScreenHeader("VibePizzaiolo", voice)
 
         Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Pal.card).padding(4.dp),

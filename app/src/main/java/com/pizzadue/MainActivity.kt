@@ -31,8 +31,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // hardware volume buttons control the alarm stream, which carries ticks and voice
-        volumeControlStream = AudioManager.STREAM_ALARM
+        // the volume buttons control whichever sound type the beeps use (alarm or media)
+        lifecycleScope.launch {
+            vm.settings.map { it.asAlarm }.distinctUntilChanged().collect {
+                volumeControlStream = if (it) AudioManager.STREAM_ALARM else AudioManager.STREAM_MUSIC
+            }
+        }
 
         setContent { PizzaTheme { App(vm) } }
 

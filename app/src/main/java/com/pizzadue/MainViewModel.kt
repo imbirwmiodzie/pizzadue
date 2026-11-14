@@ -50,6 +50,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 TimerRepository.setIdle(st.mode, durationFor(st.mode, s))
             }
         }
+        // the sound player follows Settings even when no timer runs (previews in Settings)
+        viewModelScope.launch { settings.collect { player.configure(it) } }
         // restart listening when the language switches change
         viewModelScope.launch {
             settings.map { langs(it) }.distinctUntilChanged().collect { if (foreground) voice.start(it) }

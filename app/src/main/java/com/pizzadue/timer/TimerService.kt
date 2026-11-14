@@ -58,12 +58,7 @@ class TimerService : Service() {
         settings = SettingsRepository.get(this).flow.stateIn(scope, SharingStarted.Eagerly, Settings())
         player = SoundPlayer.get(this)
         scope.launch {
-            settings.collect { s ->
-                player.vibrate = s.vibrate
-                player.flash = s.flash
-                player.volumePct = s.volume
-                player.night = s.night
-            }
+            settings.collect { s -> player.configure(s) }
         }
         createChannel()
     }
@@ -215,7 +210,7 @@ class TimerService : Service() {
     private fun acquireWake() {
         if (wakeLock?.isHeld == true) return
         wakeLock = getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "PizzaDue:timer")
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "VibePizzaiolo:timer")
             .apply { acquire(2 * 60 * 60_000L) }
     }
 

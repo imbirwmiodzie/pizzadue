@@ -67,33 +67,36 @@ jobs:
       - name: Collect APKs
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk "dist/pizzadue-$PIZZADUE_VERSION.apk"
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/pizzadue-$PIZZADUE_VERSION-debug.apk"
+          cp app/build/outputs/apk/release/app-release.apk "dist/vibepizzaiolo-$PIZZADUE_VERSION.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/vibepizzaiolo-$PIZZADUE_VERSION-debug.apk"
+          cp app/build/outputs/apk/release/app-release.apk dist/vibepizzaiolo.apk
+          # the old name keeps working for links already saved on phones
           cp app/build/outputs/apk/release/app-release.apk dist/pizzadue.apk
           ls -la dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pizzadue-${{ env.PIZZADUE_VERSION }}
-          path: dist/pizzadue-*.apk
+          name: vibepizzaiolo-${{ env.PIZZADUE_VERSION }}
+          path: dist/vibepizzaiolo-*.apk
           if-no-files-found: error
 
       # Every push to the default branch replaces the "latest" pre-release,
-      # so https://github.com/<owner>/<repo>/releases/download/latest/pizzadue.apk always has the newest build.
+      # so https://github.com/<owner>/<repo>/releases/download/latest/vibepizzaiolo.apk always has the newest build
+      # (pizzadue.apk is the same file under the app's old name).
       - name: Publish "latest" pre-release
         if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest dist/pizzadue.apk "dist/pizzadue-$PIZZADUE_VERSION.apk" \
-            --prerelease --target "$GITHUB_SHA" --title "Latest build ($PIZZADUE_VERSION)" \
-            --notes "Newest build from ${GITHUB_SHA::7}. Download pizzadue.apk on your phone and open it to install."
+          gh release create latest dist/vibepizzaiolo.apk dist/pizzadue.apk "dist/vibepizzaiolo-$PIZZADUE_VERSION.apk" \
+            --prerelease --target "$GITHUB_SHA" --title "VibePizzaiolo latest build ($PIZZADUE_VERSION)" \
+            --notes "Newest build from ${GITHUB_SHA::7}. Download vibepizzaiolo.apk on your phone and open it to install."
 
       - name: Publish tagged release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/pizzadue.apk "dist/pizzadue-$PIZZADUE_VERSION.apk" \
-            --title "PizzaDue $GITHUB_REF_NAME" --generate-notes
+          gh release create "$GITHUB_REF_NAME" dist/vibepizzaiolo.apk "dist/vibepizzaiolo-$PIZZADUE_VERSION.apk" \
+            --title "VibePizzaiolo $GITHUB_REF_NAME" --generate-notes

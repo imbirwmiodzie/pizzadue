@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PizzaDue</string>
+    <string name="app_name">VibePizzaiolo</string>
     <string name="channel_timer">Timer</string>
     <string name="notif_bake">Pizza in the oven</string>
     <string name="notif_preheat">Oven heating</string>

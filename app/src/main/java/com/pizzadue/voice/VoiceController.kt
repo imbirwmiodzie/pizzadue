@@ -154,7 +154,7 @@ class VoiceController(
     }
 
     private companion object {
-        const val TAG = "PizzaDueVoice"
+        const val TAG = "VibePizzaioloVoice"
         const val SAMPLE_RATE = 16_000
         const val MIN_CONFIDENCE = 0.6
     }
