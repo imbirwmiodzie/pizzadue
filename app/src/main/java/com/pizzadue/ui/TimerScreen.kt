@@ -69,6 +69,44 @@ private val PREHEAT_PRESETS = listOf(20 * 60, 30 * 60, 45 * 60)
 
 @Composable
 fun TimerScreen(state: TimerState, settings: Settings, voice: VoiceStatus, a: TimerActions) {
+    Box(Modifier.fillMaxSize()) {
+        TimerContent(state, settings, voice, a)
+        if (state.alert != Alert.NONE) SilenceOverlay(state.alert, a.stop)
+    }
+}
+
+/** While the end call plays, the whole screen is one big "silence" button: no aiming with floury hands. */
+@Composable
+private fun SilenceOverlay(alert: Alert, onSilence: () -> Unit) {
+    Surface(
+        onClick = onSilence,
+        color = Pal.bg.copy(alpha = 0.88f),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                if (alert == Alert.PRONTA) "La pizza è pronta!" else "Forno a legna caldo!",
+                color = Pal.tomato, fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            Text(
+                "Tap anywhere to silence",
+                color = Pal.fg, fontSize = 18.sp, modifier = Modifier.padding(top = 16.dp),
+            )
+            Text(
+                "or press a volume button, or say “stop”",
+                color = Pal.muted, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimerContent(state: TimerState, settings: Settings, voice: VoiceStatus, a: TimerActions) {
     val bake = state.mode == Mode.BAKE
     val accent = if (bake) Pal.flame else Pal.ember
     val busy = state.isActive || state.phase == Phase.DONE
@@ -105,15 +143,6 @@ fun TimerScreen(state: TimerState, settings: Settings, voice: VoiceStatus, a: Ti
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     modifier = Modifier.height(36.dp),
                 ) { Text(formatClock(sec * 1000L), fontFamily = Mono, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
-            }
-        }
-
-        if (state.alert != Alert.NONE) {
-            OutlinedButton(onClick = a.stop, modifier = Modifier.fillMaxWidth().height(48.dp), border = BorderStroke(1.dp, Pal.tomato)) {
-                Text(
-                    if (state.alert == Alert.PRONTA) "La pizza è pronta! · Silence" else "Forno a legna caldo! · Silence",
-                    color = Pal.tomato, fontWeight = FontWeight.SemiBold,
-                )
             }
         }
 

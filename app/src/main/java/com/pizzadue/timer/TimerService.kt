@@ -125,7 +125,7 @@ class TimerService : Service() {
             Cue.Gira -> if (s.gira) player.voice(Clip.GIRA)
             Cue.BakeDone -> {
                 TimerRepository.update { it.copy(phase = Phase.DONE, elapsedMs = it.durationMs, alert = Alert.PRONTA, next = null) }
-                startAlert(Clip.PRONTA, enabled = s.pronta, everyMs = 10_000L, forMs = 5 * 60_000L)
+                startAlert(Clip.PRONTA, enabled = s.pronta, everyMs = 10_000L, times = ALERT_TIMES)
                 return true
             }
             Cue.PreheatDone -> {
@@ -134,23 +134,23 @@ class TimerService : Service() {
                 TimerRepository.update {
                     TimerState(mode = Mode.BAKE, phase = Phase.IDLE, durationMs = s.bakeSec * 1000L, alert = Alert.FORNO)
                 }
-                startAlert(Clip.FORNO, enabled = s.forno, everyMs = 30_000L, forMs = 10 * 60_000L)
+                startAlert(Clip.FORNO, enabled = s.forno, everyMs = 30_000L, times = ALERT_TIMES)
                 return true
             }
         }
         return false
     }
 
-    /** Repeats a voice clip until stopped, "vai!" is said, or [forMs] passes. */
-    private fun startAlert(clip: Clip, enabled: Boolean, everyMs: Long, forMs: Long) {
+    /** Plays a voice clip [times] times, [everyMs] apart, unless stopped or "vai!" comes first. */
+    private fun startAlert(clip: Clip, enabled: Boolean, everyMs: Long, times: Int) {
         cancelAlert()
         notifyNow()
         alertJob = scope.launch {
-            val until = SystemClock.elapsedRealtime() + forMs
-            while (SystemClock.elapsedRealtime() < until) {
+            repeat(times) { i ->
                 if (enabled) player.voice(clip) else player.longTick()
-                delay(everyMs)
+                if (i < times - 1) delay(everyMs)
             }
+            delay(3_000L) // let the last call finish
             TimerRepository.update { if (it.phase == Phase.DONE) TimerState(durationMs = settings.value.bakeSec * 1000L) else it.copy(alert = Alert.NONE) }
             finishService()
         }
@@ -272,6 +272,8 @@ class TimerService : Service() {
     }
 
     companion object {
+        /** How many times the end call ("La pizza è pronta!", "Forno a legna caldo") is played. */
+        const val ALERT_TIMES = 3
         private const val CHANNEL = "timer"
         private const val NOTIFICATION_ID = 15
         private const val ACTION_START = "com.pizzadue.START"

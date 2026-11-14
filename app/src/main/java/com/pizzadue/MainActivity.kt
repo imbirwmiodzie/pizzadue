@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.pizzadue.timer.Alert
 import com.pizzadue.ui.App
 import com.pizzadue.ui.PizzaTheme
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -51,6 +53,15 @@ class MainActivity : ComponentActivity() {
             }
         }
         askPermissions()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        val volumeKey = keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+        if (volumeKey && vm.timer.value.alert != Alert.NONE) {
+            vm.stop()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     private fun applyBright(on: Boolean) {
