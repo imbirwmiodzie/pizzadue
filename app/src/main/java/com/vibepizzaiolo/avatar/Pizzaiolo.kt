@@ -120,8 +120,9 @@ object Pizzaiolo {
             addCircle(cx + s * 0.085f, bandTop - s * 0.07f, s * 0.085f, Path.Direction.CW)
             addCircle(cx, bandTop - s * 0.12f, s * 0.1f, Path.Direction.CW)
         }
+        // outline first, twice as thick, then the fill on top: only the outer edge stays inked
+        c.drawPath(puffs, Paint(line).apply { strokeWidth = line.strokeWidth * 2 })
         c.drawPath(puffs, fill(WHITE))
-        c.drawPath(puffs, line)
         val band = RectF(cx - s * 0.13f, bandTop - s * 0.035f, cx + s * 0.13f, bandTop + s * 0.035f)
         c.drawRoundRect(band, s * 0.02f, s * 0.02f, fill(WHITE))
         c.drawRoundRect(band, s * 0.02f, s * 0.02f, line)
@@ -139,16 +140,14 @@ object Pizzaiolo {
     }
 
     private fun peel(c: Canvas, x: Float, y: Float, s: Float, line: Paint, fill: (Int) -> Paint) {
-        // handle
-        c.save()
-        c.rotate(-35f, x, y)
-        val handle = RectF(x - s * 0.018f, y - s * 0.05f, x + s * 0.018f, y + s * 0.42f)
-        c.drawRoundRect(handle, s * 0.018f, s * 0.018f, fill(WOOD))
-        c.drawRoundRect(handle, s * 0.018f, s * 0.018f, line)
-        c.restore()
         // blade with the pizza, up and to the side
         val bx = x + s * 0.12f
         val by = y - s * 0.17f
+        // handle: from the blade, through the hand, a little beyond
+        val ex = x - (bx - x) * 0.45f
+        val ey = y - (by - y) * 0.45f
+        c.drawLine(bx, by, ex, ey, Paint(line).apply { strokeWidth = s * 0.036f + line.strokeWidth * 2 })
+        c.drawLine(bx, by, ex, ey, Paint(fill(WOOD)).apply { style = Paint.Style.STROKE; strokeWidth = s * 0.036f; strokeCap = Paint.Cap.ROUND })
         c.drawOval(RectF(bx - s * 0.17f, by - s * 0.07f, bx + s * 0.17f, by + s * 0.07f), fill(WOOD))
         c.drawOval(RectF(bx - s * 0.17f, by - s * 0.07f, bx + s * 0.17f, by + s * 0.07f), line)
         c.drawOval(RectF(bx - s * 0.14f, by - s * 0.055f, bx + s * 0.14f, by + s * 0.045f), fill(CRUST))

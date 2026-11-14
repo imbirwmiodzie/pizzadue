@@ -337,7 +337,7 @@ class VideoMaker(private val context: Context) {
             val p = paint(52f, 0xFF1A1E23.toInt(), bold, Paint.Align.CENTER)
             val bw = p.measureText(text) + 70f
             val bx = W - 40f - bw / 2
-            val by = 760f
+            val by = 690f
             c.saveLayerAlpha(null, (255 * b).toInt())
             val bubble = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
             c.drawRoundRect(RectF(bx - bw / 2, by - 70f, bx + bw / 2, by + 40f), 40f, 40f, bubble)
