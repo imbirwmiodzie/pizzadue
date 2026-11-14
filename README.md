@@ -27,6 +27,18 @@ The card carries the real bake: pizza number, bake time, hydration, salt, yeast,
 VibePizzaiolo logo. A caption with the download link and #VibePizzaiolo is copied when you share (Instagram and
 Facebook do not accept text from other apps, so paste it); WhatsApp and most other apps get it attached.
 
+## Pizza reel and you as the pizzaiolo
+
+**Video reel**: the camera icon → *Video reel*. An animation shows how to film (from above, once around low, the rim
+with a finger press), then the phone's camera records up to 20 s. The app edits it by itself into a vertical
+1080×1920 reel: from above → two quick cuts around → the rim with its real crunch → the **QUALITÀ SUPERIORE** seal
+falling onto the pizza with a thud → the ending with the cartoon pizzaiolo waving and *“La pizza è pronta!”*.
+Made on the phone with Media3 Transformer; shared like the cards (Instagram, Facebook, WhatsApp, more, save).
+
+**You as the pizzaiolo**: Settings → *You, the pizzaiolo* → Selfie. The app finds your face, draws it as a cartoon
+(flat colours and ink outlines), shows it as your icon on the Timer and puts it on the pizzaiolo at the end of every
+reel. Everything stays on the phone.
+
 ## How it sounds
 
 A long beep marks every start. Bake (counted from “vai!”): 1 short tick at :15, 2 at :30, 3 at :45, one long tick on every full minute.

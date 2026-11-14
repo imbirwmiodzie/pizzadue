@@ -101,6 +101,51 @@ object ShareUtils {
         }
     }
 
+    /** A fresh file for the camera app to record the pizza video into. */
+    fun newVideoUri(context: Context): Uri {
+        val dir = File(context.cacheDir, "videos").apply { mkdirs() }
+        dir.listFiles { f -> f.name.startsWith("recording_") }?.forEach { it.delete() }
+        val file = File(dir, "recording_${System.currentTimeMillis()}.mp4")
+        return FileProvider.getUriForFile(context, authority(context), file)
+    }
+
+    /** Sends the finished reel to [target], like [share] does for images. */
+    fun shareVideo(context: Context, video: File, caption: String, target: Target) {
+        val uri = FileProvider.getUriForFile(context, authority(context), video)
+        copyCaption(context, caption)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "video/mp4"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_TEXT, caption)
+            clipData = ClipData.newRawUri("", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        if (target.pkg != null) {
+            try {
+                context.startActivity(Intent(send).setPackage(target.pkg))
+                return
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(context, "${target.label} is not installed", Toast.LENGTH_SHORT).show()
+            }
+        }
+        context.startActivity(Intent.createChooser(send, "Share your pizza"))
+    }
+
+    /** Saves the reel to Movies/VibePizzaiolo (Android 10 or newer). */
+    fun saveVideoToGallery(context: Context, video: File): Boolean {
+        if (Build.VERSION.SDK_INT < 29) return false
+        val values = ContentValues().apply {
+            put(MediaStore.Video.Media.DISPLAY_NAME, "VibePizzaiolo_${System.currentTimeMillis()}.mp4")
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+            put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/VibePizzaiolo")
+        }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values) ?: return false
+        return runCatching {
+            resolver.openOutputStream(uri)?.use { out -> video.inputStream().use { it.copyTo(out) } } != null
+        }.getOrDefault(false)
+    }
+
     /** Saves the card to Pictures/VibePizzaiolo. Needs Android 10 or newer (no storage permission). */
     fun saveToGallery(context: Context, card: Bitmap): Boolean {
         if (Build.VERSION.SDK_INT < 29) return false

@@ -29,7 +29,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.unit.dp
 import com.vibepizzaiolo.MainViewModel
+import com.vibepizzaiolo.VideoUi
+import com.vibepizzaiolo.share.RecordPizzaVideo
+import com.vibepizzaiolo.share.TakeSelfie
 import com.vibepizzaiolo.share.ShareUtils
 import com.vibepizzaiolo.timer.Alert
 import com.vibepizzaiolo.timer.Phase
@@ -43,6 +49,9 @@ fun App(vm: MainViewModel) {
     val voice by vm.voiceStatus.collectAsStateWithLifecycle()
     val share by vm.share.collectAsStateWithLifecycle()
     val bakeLog by vm.bakeLog.collectAsStateWithLifecycle()
+    val video by vm.video.collectAsStateWithLifecycle()
+    val avatar by vm.avatar.collectAsStateWithLifecycle()
+    val avatarBusy by vm.avatarBusy.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // ---- photo for sharing: phone's camera app or the gallery ----
@@ -66,22 +75,97 @@ fun App(vm: MainViewModel) {
         }
     }
 
+    // ---- the pizza reel: record with the camera app, or pick a video ----
+    var videoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    val recordVideo = rememberLauncherForActivityResult(RecordPizzaVideo()) { ok ->
+        val uri = videoUri
+        if (ok && uri != null) vm.makeVideo(uri)
+    }
+    val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) vm.makeVideo(uri)
+    }
+    fun startRecording() {
+        val uri = ShareUtils.newVideoUri(context)
+        videoUri = uri
+        try {
+            recordVideo.launch(uri)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, "No camera app found, pick a video instead", Toast.LENGTH_LONG).show()
+            pickVideo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
+        }
+    }
+
+    // ---- your selfie, made into a cartoon ----
+    var selfieUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    val takeSelfie = rememberLauncherForActivityResult(TakeSelfie()) { ok ->
+        val uri = selfieUri
+        if (ok && uri != null) vm.makeAvatar(uri)
+    }
+    val pickSelfie = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) vm.makeAvatar(uri)
+    }
+    fun selfie() {
+        val uri = ShareUtils.newPhotoUri(context)
+        selfieUri = uri
+        try {
+            takeSelfie.launch(uri)
+        } catch (_: ActivityNotFoundException) {
+            pickSelfie.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
+    }
+
     if (askSource) {
         AlertDialog(
             onDismissRequest = { askSource = false },
             title = { Text("Share your pizza") },
-            text = { Text("Take a photo of the pizza now, or pick one you already took.") },
-            confirmButton = {
-                TextButton(onClick = { askSource = false; openCamera() }) { Text("Take photo") }
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { askSource = false; vm.openVideoGuide() }) {
+                        Text("🎬  Video reel (film 15 s, the app edits it)", color = Pal.flame)
+                    }
+                    TextButton(onClick = { askSource = false; openCamera() }) { Text("📷  Take a photo", color = Pal.fg) }
+                    TextButton(onClick = {
+                        askSource = false
+                        pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }) { Text("🖼  Photo from the gallery", color = Pal.fg) }
+                }
             },
-            dismissButton = {
-                TextButton(onClick = {
-                    askSource = false
-                    pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                }) { Text("From gallery") }
-            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { askSource = false }) { Text("Cancel") } },
             containerColor = Pal.card,
         )
+    }
+
+    // ---- reel screens replace the tabs while open ----
+    val videoUi = video
+    if (videoUi != null) {
+        Scaffold(containerColor = Pal.bg) { pad ->
+            Box(Modifier.fillMaxSize().padding(pad)) {
+                if (videoUi is VideoUi.Guide) {
+                    RecordGuideScreen(
+                        onRecord = ::startRecording,
+                        onGallery = { pickVideo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)) },
+                        onClose = vm::closeVideo,
+                    )
+                } else {
+                    VideoScreen(
+                        ui = videoUi,
+                        onShare = { target -> (videoUi as? VideoUi.Ready)?.file?.let { ShareUtils.shareVideo(context, it, vm.caption(), target) } },
+                        onSave = {
+                            val file = (videoUi as? VideoUi.Ready)?.file
+                            val ok = file != null && ShareUtils.saveVideoToGallery(context, file)
+                            Toast.makeText(
+                                context,
+                                if (ok) "Saved to Movies/VibePizzaiolo" else "Saving needs Android 10 or newer; use Share instead",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
+                        onClose = vm::closeVideo,
+                    )
+                }
+            }
+        }
+        return
     }
 
     // ---- share screen replaces the tabs while open ----
@@ -139,9 +223,15 @@ fun App(vm: MainViewModel) {
                         share = { askSource = true },
                     ),
                     justBaked = justBaked,
+                    avatar = avatar,
                 )
                 AppTab.DOUGH -> DoughScreen(settings, voice, vm::updateSettings) { vm.selectTab(AppTab.SETTINGS) }
-                AppTab.SETTINGS -> SettingsScreen(settings, voice, vm::updateSettings, vm::preview, vm::previewVolume)
+                AppTab.SETTINGS -> SettingsScreen(
+                    settings, voice, vm::updateSettings, vm::preview, vm::previewVolume,
+                    avatar = AvatarActions(avatar, avatarBusy, ::selfie, {
+                        pickSelfie.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }, vm::removeAvatar),
+                )
             }
         }
     }

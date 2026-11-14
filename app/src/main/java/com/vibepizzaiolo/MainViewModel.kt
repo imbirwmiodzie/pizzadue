@@ -26,6 +26,11 @@ import com.vibepizzaiolo.share.CardRenderer
 import com.vibepizzaiolo.share.Design
 import com.vibepizzaiolo.share.Format
 import com.vibepizzaiolo.share.ShareUtils
+import com.vibepizzaiolo.avatar.AvatarStore
+import com.vibepizzaiolo.avatar.Cartoonizer
+import com.vibepizzaiolo.video.VideoMaker
+import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +54,14 @@ data class ShareUi(
     val error: String? = null,
 )
 
+/** The pizza reel: the recording guide, making it, then the finished file. */
+sealed interface VideoUi {
+    data object Guide : VideoUi
+    data class Working(val progress: Int) : VideoUi
+    data class Ready(val file: File) : VideoUi
+    data class Failed(val message: String) : VideoUi
+}
+
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SettingsRepository.get(app)
     private val player = SoundPlayer.get(app)
@@ -69,6 +82,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _share = MutableStateFlow<ShareUi?>(null)
     val share: StateFlow<ShareUi?> = _share.asStateFlow()
 
+    private val _video = MutableStateFlow<VideoUi?>(null)
+    val video: StateFlow<VideoUi?> = _video.asStateFlow()
+
+    /** Your cartoon portrait: your icon, and your face on the pizzaiolo at the end of the reel. */
+    private val _avatar = MutableStateFlow<Bitmap?>(null)
+    val avatar: StateFlow<Bitmap?> = _avatar.asStateFlow()
+    private val _avatarBusy = MutableStateFlow(false)
+    val avatarBusy: StateFlow<Boolean> = _avatarBusy.asStateFlow()
+
     init {
         // the idle timer always shows the current bake / preheat time from Settings
         viewModelScope.launch {
@@ -77,6 +99,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 TimerRepository.setIdle(st.mode, durationFor(st.mode, s))
             }
         }
+        viewModelScope.launch { _avatar.value = withContext(Dispatchers.IO) { AvatarStore.load(getApplication()) } }
         // the sound player follows Settings even when no timer runs (previews in Settings)
         viewModelScope.launch { settings.collect { player.configure(it) } }
         // restart listening when the language switches change
@@ -173,6 +196,56 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val card = withContext(Dispatchers.Default) { CardRenderer.render(photo, ui.design, ui.format, cardInfo()) }
             _share.update { it?.copy(card = card, working = false) }
         }
+    }
+
+    // ---- the pizza reel ----
+    private var videoJob: Job? = null
+
+    fun openVideoGuide() { _video.value = VideoUi.Guide }
+
+    fun closeVideo() {
+        videoJob?.cancel()
+        _video.value = null
+    }
+
+    fun makeVideo(recording: Uri) {
+        videoJob?.cancel()
+        _video.value = VideoUi.Working(0)
+        videoJob = viewModelScope.launch {
+            try {
+                val file = VideoMaker(getApplication()).make(recording, cardInfo(), _avatar.value) { p ->
+                    if (_video.value is VideoUi.Working) _video.value = VideoUi.Working(p)
+                }
+                _video.value = VideoUi.Ready(file)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _video.value = VideoUi.Failed(
+                    (e as? IllegalArgumentException)?.message ?: "Could not make the reel (${e.javaClass.simpleName}). Try recording again."
+                )
+            }
+        }
+    }
+
+    // ---- your cartoon portrait ----
+    fun makeAvatar(photo: Uri) {
+        _avatarBusy.value = true
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val cartoon = withContext(Dispatchers.Default) {
+                ShareUtils.loadPhoto(app, photo, maxSide = 1400)?.let { Cartoonizer.cartoon(it) }
+            }
+            if (cartoon != null) {
+                withContext(Dispatchers.IO) { AvatarStore.save(app, cartoon) }
+                _avatar.value = cartoon
+            }
+            _avatarBusy.value = false
+        }
+    }
+
+    fun removeAvatar() {
+        AvatarStore.delete(getApplication())
+        _avatar.value = null
     }
 
     // ---- voice: start and stop only ----

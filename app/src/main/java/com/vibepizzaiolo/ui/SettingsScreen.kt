@@ -8,6 +8,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -33,6 +45,7 @@ fun SettingsScreen(
     update: ((Settings) -> Settings) -> Unit,
     preview: (Clip) -> Unit,
     previewVolume: () -> Unit,
+    avatar: AvatarActions? = null,
 ) {
     fun step(v: Float, d: Float, range: ClosedFloatingPointRange<Float>) = ((v + d) * 100).roundToInt().div(100f).coerceIn(range)
 
@@ -41,6 +54,11 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ScreenHeader("Settings", null)
+
+        if (avatar != null) {
+            SectionLabel("You, the pizzaiolo")
+            Group { AvatarRow(avatar) }
+        }
 
         SectionLabel("Screen")
         Group {
@@ -117,6 +135,42 @@ fun SettingsScreen(
             VoiceStatus.Off -> "Voice is off."
         }
         Text(status, color = Pal.muted, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp, bottom = 16.dp))
+    }
+}
+
+/** Your cartoon portrait and what you can do with it. */
+class AvatarActions(
+    val picture: Bitmap?,
+    val busy: Boolean,
+    val takeSelfie: () -> Unit,
+    val pickPhoto: () -> Unit,
+    val remove: () -> Unit,
+)
+
+@Composable
+private fun AvatarRow(a: AvatarActions) {
+    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(84.dp).clip(CircleShape).background(Pal.raised), contentAlignment = Alignment.Center) {
+            when {
+                a.busy -> CircularProgressIndicator(color = Pal.flame, modifier = Modifier.size(32.dp))
+                a.picture != null -> Image(a.picture.asImageBitmap(), "Your cartoon portrait", Modifier.size(84.dp))
+                else -> Icon(Icons.Default.Face, null, tint = Pal.muted, modifier = Modifier.size(44.dp))
+            }
+        }
+        Column(Modifier.padding(start = 14.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                if (a.picture == null) "Take a selfie: the app draws you as a cartoon. You become the pizzaiolo at the end of your reels."
+                else "This is you as the pizzaiolo: your icon and the chef at the end of your reels.",
+                fontSize = 13.sp, color = Pal.muted,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(onClick = a.takeSelfie, enabled = !a.busy, contentPadding = PaddingValues(horizontal = 10.dp)) { Text("Selfie", color = Pal.flame) }
+                OutlinedButton(onClick = a.pickPhoto, enabled = !a.busy, contentPadding = PaddingValues(horizontal = 10.dp)) { Text("Gallery", color = Pal.fg) }
+                if (a.picture != null) {
+                    OutlinedButton(onClick = a.remove, enabled = !a.busy, contentPadding = PaddingValues(horizontal = 10.dp)) { Text("Remove", color = Pal.muted) }
+                }
+            }
+        }
     }
 }
 

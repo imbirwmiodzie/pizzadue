@@ -26,6 +26,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -71,9 +75,9 @@ private val BAKE_PRESETS = listOf(60, 90, 120, 180)
 private val PREHEAT_PRESETS = listOf(20 * 60, 30 * 60, 45 * 60)
 
 @Composable
-fun TimerScreen(state: TimerState, settings: Settings, voice: VoiceStatus, a: TimerActions, justBaked: Boolean) {
+fun TimerScreen(state: TimerState, settings: Settings, voice: VoiceStatus, a: TimerActions, justBaked: Boolean, avatar: Bitmap? = null) {
     Box(Modifier.fillMaxSize()) {
-        TimerContent(state, settings, voice, a, justBaked)
+        TimerContent(state, settings, voice, a, justBaked, avatar)
         if (state.alert != Alert.NONE) SilenceOverlay(state.alert, a.stop)
     }
 }
@@ -109,7 +113,7 @@ private fun SilenceOverlay(alert: Alert, onSilence: () -> Unit) {
 }
 
 @Composable
-private fun TimerContent(state: TimerState, settings: Settings, voice: VoiceStatus, a: TimerActions, justBaked: Boolean) {
+private fun TimerContent(state: TimerState, settings: Settings, voice: VoiceStatus, a: TimerActions, justBaked: Boolean, avatar: Bitmap?) {
     val bake = state.mode == Mode.BAKE
     val accent = if (bake) Pal.flame else Pal.ember
     val busy = state.isActive || state.phase == Phase.DONE
@@ -119,6 +123,12 @@ private fun TimerContent(state: TimerState, settings: Settings, voice: VoiceStat
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ScreenHeader("VibePizzaiolo", voice) {
+            if (avatar != null) {
+                Image(
+                    bitmap = avatar.asImageBitmap(), contentDescription = "You, the pizzaiolo",
+                    modifier = Modifier.padding(start = 8.dp).size(36.dp).clip(CircleShape),
+                )
+            }
             IconButton(onClick = a.share) { Icon(Icons.Default.PhotoCamera, contentDescription = "Share your pizza", tint = Pal.flame) }
         }
 

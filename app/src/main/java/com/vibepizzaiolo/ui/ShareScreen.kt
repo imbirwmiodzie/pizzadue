@@ -78,7 +78,14 @@ fun ShareScreen(
         ChoiceRow(Design.entries.map { it.label }, ui.design.ordinal) { onDesign(Design.entries[it]) }
         ChoiceRow(Format.entries.map { it.label }, ui.format.ordinal) { onFormat(Format.entries[it]) }
 
-        val ready = ui.card != null && !ui.working
+        ShareButtons(ui.card != null && !ui.working, onShare, onSave)
+    }
+}
+
+/** Instagram, Facebook, WhatsApp, the share menu and save: used for cards and reels alike. */
+@Composable
+fun ShareButtons(ready: Boolean, onShare: (Target) -> Unit, onSave: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BrandButton("Instagram", INSTAGRAM, ready, Modifier.weight(1f)) { onShare(Target.INSTAGRAM) }
             BrandButton("Facebook", FACEBOOK, ready, Modifier.weight(1f)) { onShare(Target.FACEBOOK) }

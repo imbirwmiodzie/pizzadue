@@ -106,7 +106,7 @@ object CardRenderer {
      * "CON AMORE" round the bottom (hand-made with love), "QUALITÀ SUPERIORE" and the pizza number
      * on a red disc, and ribbon tails in the Italian colours.
      */
-    private fun qualitySeal(c: Canvas, cx: Float, cy: Float, r: Float, info: CardInfo) {
+    fun qualitySeal(c: Canvas, cx: Float, cy: Float, r: Float, info: CardInfo) {
         c.save()
         c.rotate(-10f, cx, cy)
 
@@ -263,7 +263,7 @@ object CardRenderer {
         text(c, "VibePizzaiolo", x + size + 16f, y + size * 0.76f, display(size * 0.74f), color)
     }
 
-    private fun drawLogo(c: Canvas, x: Float, y: Float, size: Float, color: Int) {
+    fun drawLogo(c: Canvas, x: Float, y: Float, size: Float, color: Int) {
         c.save()
         c.translate(x, y)
         c.scale(size / 72f, size / 72f)
