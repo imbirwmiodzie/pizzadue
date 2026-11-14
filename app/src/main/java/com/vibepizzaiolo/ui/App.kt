@@ -1,0 +1,148 @@
+package com.vibepizzaiolo.ui
+
+import android.content.ActivityNotFoundException
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.outlined.BakeryDining
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vibepizzaiolo.MainViewModel
+import com.vibepizzaiolo.share.ShareUtils
+import com.vibepizzaiolo.timer.Alert
+import com.vibepizzaiolo.timer.Phase
+import com.vibepizzaiolo.voice.AppTab
+
+@Composable
+fun App(vm: MainViewModel) {
+    val tab by vm.tab.collectAsStateWithLifecycle()
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val timer by vm.timer.collectAsStateWithLifecycle()
+    val voice by vm.voiceStatus.collectAsStateWithLifecycle()
+    val share by vm.share.collectAsStateWithLifecycle()
+    val bakeLog by vm.bakeLog.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // ---- photo for sharing: phone's camera app or the gallery ----
+    var photoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var askSource by rememberSaveable { mutableStateOf(false) }
+    val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val uri = photoUri
+        if (ok && uri != null) vm.openShare(uri)
+    }
+    val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) vm.openShare(uri)
+    }
+    fun openCamera() {
+        val uri = ShareUtils.newPhotoUri(context)
+        photoUri = uri
+        try {
+            takePicture.launch(uri)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, "No camera app found, pick a photo instead", Toast.LENGTH_LONG).show()
+            pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
+    }
+
+    if (askSource) {
+        AlertDialog(
+            onDismissRequest = { askSource = false },
+            title = { Text("Share your pizza") },
+            text = { Text("Take a photo of the pizza now, or pick one you already took.") },
+            confirmButton = {
+                TextButton(onClick = { askSource = false; openCamera() }) { Text("Take photo") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    askSource = false
+                    pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }) { Text("From gallery") }
+            },
+            containerColor = Pal.card,
+        )
+    }
+
+    // ---- share screen replaces the tabs while open ----
+    val shareUi = share
+    if (shareUi != null) {
+        Scaffold(containerColor = Pal.bg) { pad ->
+            Box(Modifier.fillMaxSize().padding(pad)) {
+                ShareScreen(
+                    ui = shareUi,
+                    onDesign = vm::setDesign,
+                    onFormat = vm::setFormat,
+                    onShare = { target -> shareUi.card?.let { ShareUtils.share(context, it, vm.caption(), target) } },
+                    onSave = {
+                        val card = shareUi.card
+                        val ok = card != null && ShareUtils.saveToGallery(context, card)
+                        Toast.makeText(
+                            context,
+                            if (ok) "Saved to Pictures/VibePizzaiolo" else "Saving needs Android 10 or newer; use Share instead",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    },
+                    onClose = vm::closeShare,
+                )
+            }
+        }
+        return
+    }
+
+    // a pizza came out in the last 30 minutes and nothing is running: offer to share it
+    val justBaked = bakeLog.lastAt > 0 &&
+        System.currentTimeMillis() - bakeLog.lastAt < 30 * 60_000L &&
+        !timer.isActive && timer.alert == Alert.NONE
+
+    Scaffold(
+        containerColor = Pal.bg,
+        bottomBar = {
+            NavigationBar(containerColor = Pal.bg) {
+                val colors = NavigationBarItemDefaults.colors(indicatorColor = Pal.card, selectedIconColor = Pal.fg, selectedTextColor = Pal.fg, unselectedIconColor = Pal.muted, unselectedTextColor = Pal.muted)
+                NavigationBarItem(tab == AppTab.TIMER, { vm.selectTab(AppTab.TIMER) }, { Icon(Icons.Default.Timer, null) }, label = { Text("Timer") }, colors = colors)
+                NavigationBarItem(tab == AppTab.DOUGH, { vm.selectTab(AppTab.DOUGH) }, { Icon(Icons.Outlined.BakeryDining, null) }, label = { Text("Dough") }, colors = colors)
+                NavigationBarItem(tab == AppTab.SETTINGS, { vm.selectTab(AppTab.SETTINGS) }, { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") }, colors = colors)
+            }
+        },
+    ) { pad ->
+        Box(Modifier.fillMaxSize().padding(pad)) {
+            when (tab) {
+                AppTab.TIMER -> TimerScreen(
+                    timer, settings, voice,
+                    TimerActions(
+                        selectMode = vm::selectMode,
+                        setDuration = vm::setDuration,
+                        main = { if (timer.isActive) vm.stop() else vm.startCurrent() },
+                        pauseResume = { if (timer.phase == Phase.PAUSED) vm.resume() else vm.pause() },
+                        stop = vm::stop,
+                        share = { askSource = true },
+                    ),
+                    justBaked = justBaked,
+                )
+                AppTab.DOUGH -> DoughScreen(settings, voice, vm::updateSettings) { vm.selectTab(AppTab.SETTINGS) }
+                AppTab.SETTINGS -> SettingsScreen(settings, voice, vm::updateSettings, vm::preview, vm::previewVolume)
+            }
+        }
+    }
+}

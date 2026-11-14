@@ -10,12 +10,22 @@ A voice‑driven pizza timer for Android. Three tabs:
 ## Install
 
 Every push to the default branch publishes the newest APK as the **latest** pre‑release:
-open the repository's **Releases** page on your phone, download `vibepizzaiolo.apk` and open it
-(`pizzadue.apk`, the old name, is the same file).
+open the repository's **Releases** page on your phone, download `vibepizzaiolo.apk` and open it.
 Android asks once to allow installing apps from your browser.
 
 Each workflow run also keeps the APKs as a downloadable artifact (Actions tab → run → Artifacts).
 Tag a commit `v1.0.0` to publish a numbered release.
+
+## Share your pizza
+
+Camera icon on the Timer (and a big **Share this pizza** button right after a bake) → take a photo or pick one from
+the gallery → choose a design (**Stamp**, **Bake sheet**, **Ticket**) and a format (**Post 4:5** 1080×1350,
+**Story 9:16** 1080×1920, **Square** 1080×1080) → **Instagram**, **Facebook**, **WhatsApp**, **More…** (Android's share
+menu) or **Save to gallery** (Pictures/VibePizzaiolo).
+
+The card carries the real bake: pizza number, bake time, hydration, salt, yeast, preheat, dough balls, and the
+VibePizzaiolo logo. A caption with the download link and #VibePizzaiolo is copied when you share (Instagram and
+Facebook do not accept text from other apps, so paste it); WhatsApp and most other apps get it attached.
 
 ## How it sounds
 
@@ -55,7 +65,7 @@ scripts/convert_voice.sh     # voice/ recordings -> app/src/main/res/raw (needs 
 
 ## Release signing (optional)
 
-Without a key, builds are signed with the dev key committed in `app/signing/dev.keystore`, so every build installs
+Without a key, builds are signed with the dev key committed in `app/signing/vibepizzaiolo-dev.keystore`, so every build installs
 over the previous one. Anyone with access to this repository can sign with that key; switching to a private key later
 needs one uninstall. To sign properly, add these repository secrets:
-`PIZZADUE_KEYSTORE_BASE64` (the .jks file, base64), `PIZZADUE_KEYSTORE_PASSWORD`, `PIZZADUE_KEY_ALIAS`, `PIZZADUE_KEY_PASSWORD`.
+`VIBEPIZZAIOLO_KEYSTORE_BASE64` (the .jks file, base64), `VIBEPIZZAIOLO_KEYSTORE_PASSWORD`, `VIBEPIZZAIOLO_KEY_ALIAS`, `VIBEPIZZAIOLO_KEY_PASSWORD`.

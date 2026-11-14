@@ -5,20 +5,20 @@ plugins {
 }
 
 // Release signing comes from environment variables set by CI (see .github/workflows/android.yml).
-// Without them, builds are signed with the project's committed dev key (app/signing/dev.keystore),
+// Without them, builds are signed with the project's committed dev key (app/signing/vibepizzaiolo-dev.keystore),
 // so every CI build has the same signature and installs over the previous one.
-val releaseKeystore = System.getenv("PIZZADUE_KEYSTORE")?.let { file(it) }?.takeIf { it.exists() }
+val releaseKeystore = System.getenv("VIBEPIZZAIOLO_KEYSTORE")?.let { file(it) }?.takeIf { it.exists() }
 
 android {
-    namespace = "com.pizzadue"
+    namespace = "com.vibepizzaiolo"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.pizzadue"
+        applicationId = "com.vibepizzaiolo"
         minSdk = 26
         targetSdk = 35
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
-        versionName = System.getenv("PIZZADUE_VERSION") ?: "0.1.0"
+        versionName = System.getenv("VIBEPIZZAIOLO_VERSION") ?: "0.1.0"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
@@ -26,21 +26,21 @@ android {
         create("release") {
             if (releaseKeystore != null) {
                 storeFile = releaseKeystore
-                storePassword = System.getenv("PIZZADUE_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("PIZZADUE_KEY_ALIAS")
-                keyPassword = System.getenv("PIZZADUE_KEY_PASSWORD")
+                storePassword = System.getenv("VIBEPIZZAIOLO_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("VIBEPIZZAIOLO_KEY_ALIAS")
+                keyPassword = System.getenv("VIBEPIZZAIOLO_KEY_PASSWORD")
             } else {
-                storeFile = file("signing/dev.keystore")
-                storePassword = "pizzadue"
-                keyAlias = "pizzadue"
-                keyPassword = "pizzadue"
+                storeFile = file("signing/vibepizzaiolo-dev.keystore")
+                storePassword = "vibepizzaiolo"
+                keyAlias = "vibepizzaiolo"
+                keyPassword = "vibepizzaiolo"
             }
         }
         create("dev") {
-            storeFile = file("signing/dev.keystore")
-            storePassword = "pizzadue"
-            keyAlias = "pizzadue"
-            keyPassword = "pizzadue"
+            storeFile = file("signing/vibepizzaiolo-dev.keystore")
+            storePassword = "vibepizzaiolo"
+            keyAlias = "vibepizzaiolo"
+            keyPassword = "vibepizzaiolo"
         }
     }
 
@@ -87,6 +87,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
     // Offline speech recognition

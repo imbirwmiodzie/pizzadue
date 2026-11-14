@@ -12,4 +12,4 @@ app/src/main/assets/voice/
 .cache/
 *.jks
 *.keystore
-!app/signing/dev.keystore
+!app/signing/vibepizzaiolo-dev.keystore
