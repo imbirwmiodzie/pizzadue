@@ -97,14 +97,14 @@ object CardRenderer {
         text(c, clock(info.bakeMs), m - 6f, bottom - 6f, mono(200f, true, -0.03f), FG)
 
         // Italian quality seal, bottom right
-        val r = 175f
+        val r = 120f
         qualitySeal(c, w - m - r * 0.95f, bottom - r * 1.4f, r, info)
     }
 
     /**
-     * A gold rosette like the seals on Italian food labels: "FATTA A MANO" round the top, "con amore"
-     * and "QUALITÀ SUPERIORE" on a red disc (hand-made with love, superior quality), the app's name
-     * round the bottom, and ribbon tails in the Italian colours.
+     * A gold rosette like the seals on Italian food labels: "FATTA A MANO" round the top and
+     * "CON AMORE" round the bottom (hand-made with love), "QUALITÀ SUPERIORE" and the pizza number
+     * on a red disc, and ribbon tails in the Italian colours.
      */
     private fun qualitySeal(c: Canvas, cx: Float, cy: Float, r: Float, info: CardInfo) {
         c.save()
@@ -150,26 +150,20 @@ object CardRenderer {
         c.drawCircle(cx, cy, r * 0.6f, line)
 
         // ring text: upright on top, readable from below at the bottom
-        val ringPaint = mono(r * 0.15f, true, 0.14f).apply { color = INK }
+        val ringPaint = mono(r * 0.19f, true, 0.16f).apply { color = INK }
         val top = Path().apply { addArc(RectF(cx - r * 0.66f, cy - r * 0.66f, cx + r * 0.66f, cy + r * 0.66f), 180f, 180f) }
-        arcText(c, "FATTA A MANO", top, Math.PI.toFloat() * r * 0.66f, mono(r * 0.17f, true, 0.18f).apply { color = INK })
-        val bottomArc = Path().apply { addArc(RectF(cx - r * 0.78f, cy - r * 0.78f, cx + r * 0.78f, cy + r * 0.78f), 180f, -180f) }
-        arcText(c, "VIBEPIZZAIOLO", bottomArc, Math.PI.toFloat() * r * 0.78f, ringPaint)
+        arcText(c, "FATTA A MANO", top, Math.PI.toFloat() * r * 0.66f, ringPaint)
+        val bottomArc = Path().apply { addArc(RectF(cx - r * 0.8f, cy - r * 0.8f, cx + r * 0.8f, cy + r * 0.8f), 180f, -180f) }
+        arcText(c, "CON AMORE", bottomArc, Math.PI.toFloat() * r * 0.8f, ringPaint)
         val star = display(r * 0.14f).apply { color = INK; textAlign = Paint.Align.CENTER }
         c.drawText("★", cx - r * 0.73f, cy + r * 0.05f, star)
         c.drawText("★", cx + r * 0.73f, cy + r * 0.05f, star)
 
         // centre
         val center = Paint.Align.CENTER
-        c.drawText("QUALITÀ", cx, cy - r * 0.02f, display(r * 0.22f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.04f })
-        c.drawText("SUPERIORE", cx, cy + r * 0.19f, display(r * 0.155f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.06f })
-        c.drawText("Nº ${info.pizzaNo}", cx, cy + r * 0.4f, mono(r * 0.12f, true).apply { color = GOLD; textAlign = center })
-        c.drawText("con amore", cx, cy - r * 0.25f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD_ITALIC)
-            textSize = r * 0.13f
-            color = GOLD
-            textAlign = center
-        })
+        c.drawText("QUALITÀ", cx, cy - r * 0.04f, display(r * 0.23f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.04f })
+        c.drawText("SUPERIORE", cx, cy + r * 0.17f, display(r * 0.16f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.06f })
+        c.drawText("Nº ${info.pizzaNo}", cx, cy + r * 0.4f, mono(r * 0.13f, true).apply { color = GOLD; textAlign = center })
 
         c.restore()
     }
