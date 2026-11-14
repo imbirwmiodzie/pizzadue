@@ -99,7 +99,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.update(transform) }
     }
 
-    fun preview(clip: Clip) = player.voice(clip)
+    fun preview(clip: Clip) = player.previewClip(clip)
     fun previewVolume() = player.previewVolume()
 
     // ---- voice: start and stop only ----

@@ -31,18 +31,28 @@ enum class Clip(val res: Int) {
 }
 
 /**
- * Plays ticks and voice clips one after another, as loud as the phone allows:
- * alarm stream (loud even when media volume is down), a loudness enhancer on every sound,
- * alarm volume raised to maximum while the timer runs, plus optional vibration and
- * flashlight blink on each tick.
+ * Plays ticks and voice clips one after another on the alarm stream (heard even when the
+ * phone is on silent), at the volume chosen in Settings, with night mode, optional vibration
+ * and flashlight blink on each tick.
  */
 class SoundPlayer private constructor(private val context: Context) {
     /** Options taken from Settings. */
-    @Volatile var vibrate = true
+    @Volatile var vibrate = false
     @Volatile var flash = false
-    /** Alarm volume while a timer runs, % of maximum. */
-    @Volatile var volumePct = 100
+    /** Volume while a timer runs, % of the phone's alarm maximum (5-100). */
+    @Volatile var volumePct = 40
         set(v) { field = v; if (timerHold) applyVolume() }
+    /** Night mode: never louder than [NIGHT_PCT], and always vibrate. */
+    @Volatile var night = false
+        set(v) { field = v; if (timerHold) applyVolume() }
+
+    private val effectivePct get() = if (night) minOf(volumePct, NIGHT_PCT) else volumePct
+    private val shouldVibrate get() = vibrate || night
+
+    /** Software gain below the alarm stream's lowest step, so 5% is really quiet. */
+    @Volatile private var gain = 1f
+    /** Loudness-enhancer gain in millibels; only used near the top of the slider. */
+    @Volatile private var boostMb = 0
 
     private sealed interface Item {
         data class Ticks(val count: Int) : Item
@@ -60,7 +70,8 @@ class SoundPlayer private constructor(private val context: Context) {
     private val shortTrack = staticTrack(ToneSynth.shortTick())
     private val longTrack = staticTrack(ToneSynth.longTick())
     private val startTrack = staticTrack(ToneSynth.startBeep())
-    private val enhancers = listOf(shortTrack, longTrack, startTrack).mapNotNull { enhance(it.audioSessionId) }
+    private val tracks = listOf(shortTrack, longTrack, startTrack)
+    private val enhancers = tracks.mapNotNull { enhance(it.audioSessionId, gainMb = 0) }
 
     private val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= 31) {
         context.getSystemService(VibratorManager::class.java)?.defaultVibrator
@@ -128,22 +139,42 @@ class SoundPlayer private constructor(private val context: Context) {
         restoreVolume()
     }
 
-    /** Plays one long tick at [volumePct], for the volume slider. */
-    fun previewVolume() {
+    /** Plays one long tick at the chosen volume, for the volume slider. */
+    fun previewVolume() = withTemporaryVolume(1500) { longTick() }
+
+    /** Plays a voice clip at the chosen volume, for the play buttons in Settings. */
+    fun previewClip(clip: Clip) = withTemporaryVolume(4000) { voice(clip) }
+
+    private fun withTemporaryVolume(ms: Long, play: () -> Unit) {
         applyVolume()
-        longTick()
+        play()
         scope.launch {
-            delay(1500)
+            delay(ms)
             if (!timerHold) restoreVolume()
         }
     }
 
+    /**
+     * Alarm stream set to the step just above the chosen level, then the exact level made in
+     * software, so the slider is smooth and even 5% is quiet. The loudness enhancer only
+     * kicks in above 80%.
+     */
     private fun applyVolume() {
+        val p = effectivePct.coerceIn(5, 100) / 100f
         runCatching {
             if (savedAlarmVolume == null) savedAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
             val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-            val level = (max * volumePct / 100f).toInt().coerceIn(1, max)
+            val level = kotlin.math.ceil(max * p).toInt().coerceIn(1, max)
             audioManager.setStreamVolume(AudioManager.STREAM_ALARM, level, 0)
+            gain = (p * max / level).coerceIn(0.02f, 1f)
+        }
+        boostMb = if (p > 0.8f) ((p - 0.8f) / 0.2f * 800).toInt() else 0
+        tracks.forEach { runCatching { it.setVolume(gain) } }
+        enhancers.forEach { e ->
+            runCatching {
+                e.setTargetGain(boostMb)
+                e.enabled = boostMb > 0
+            }
         }
     }
 
@@ -159,7 +190,7 @@ class SoundPlayer private constructor(private val context: Context) {
             track.reloadStaticData()
             track.play()
         }
-        if (vibrate) runCatching { vibrator?.vibrate(VibrationEffect.createOneShot(vibrateMs, 255)) }
+        if (shouldVibrate) runCatching { vibrator?.vibrate(VibrationEffect.createOneShot(vibrateMs, 255)) }
         if (flash && torchId != null) {
             scope.launch {
                 runCatching { camera?.setTorchMode(torchId, true) }
@@ -179,8 +210,9 @@ class SoundPlayer private constructor(private val context: Context) {
                 mp.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
             }
             mp.prepare()
-            enhancer = enhance(mp.audioSessionId, gainMb = 600)
-            if (vibrate) runCatching { vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 300, 150, 300), -1)) }
+            mp.setVolume(gain, gain)
+            if (boostMb > 0) enhancer = enhance(mp.audioSessionId, gainMb = boostMb * 3 / 4)
+            if (shouldVibrate) runCatching { vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 300, 150, 300), -1)) }
             suspendCancellableCoroutine { cont ->
                 currentVoice = cont
                 mp.setOnCompletionListener { if (cont.isActive) cont.resume(Unit) }
@@ -216,15 +248,16 @@ class SoundPlayer private constructor(private val context: Context) {
     }
 
     /** Android's loudness enhancer: a limiter that adds gain without clipping. */
-    private fun enhance(sessionId: Int, gainMb: Int = 800): LoudnessEnhancer? = runCatching {
+    private fun enhance(sessionId: Int, gainMb: Int): LoudnessEnhancer? = runCatching {
         LoudnessEnhancer(sessionId).apply {
             setTargetGain(gainMb)
-            enabled = true
+            enabled = gainMb > 0
         }
     }.getOrNull()
 
     companion object {
         const val TICK_GAP_MS = 230L
+        const val NIGHT_PCT = 15
 
         @Volatile private var instance: SoundPlayer? = null
         fun get(context: Context): SoundPlayer =

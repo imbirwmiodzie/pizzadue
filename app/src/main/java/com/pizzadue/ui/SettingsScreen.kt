@@ -77,6 +77,8 @@ fun SettingsScreen(
 
         SectionLabel("Loudness")
         Group {
+            SwitchRow("Night mode", "quiet: at most 15% and vibration on", s.night, { v -> update { it.copy(night = v) } })
+            GroupDivider()
             VolumeRow(s.volume, onChange = { v -> update { it.copy(volume = v) } }, onDone = previewVolume)
             GroupDivider()
             SwitchRow("Vibrate with every tick", null, s.vibrate, { v -> update { it.copy(vibrate = v) } })
@@ -124,11 +126,11 @@ private fun VolumeRow(percent: Int, onChange: (Int) -> Unit, onDone: () -> Unit)
             value = value,
             onValueChange = { value = it; onChange(it.roundToInt()) },
             onValueChangeFinished = onDone,
-            valueRange = 10f..100f,
-            steps = 8,
+            valueRange = 5f..100f,
+            steps = 18,
             colors = SliderDefaults.colors(thumbColor = Pal.flame, activeTrackColor = Pal.flame, inactiveTrackColor = Pal.line),
         )
-        Text("The phone's volume buttons also change it while the app is open.", color = Pal.muted, fontSize = 12.sp)
+        Text("Beeps use the alarm sound, so they play even when the phone is on silent. The phone's volume buttons change it while the app is open.", color = Pal.muted, fontSize = 12.sp)
     }
 }
 

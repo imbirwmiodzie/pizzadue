@@ -62,6 +62,7 @@ class TimerService : Service() {
                 player.vibrate = s.vibrate
                 player.flash = s.flash
                 player.volumePct = s.volume
+                player.night = s.night
             }
         }
         createChannel()
