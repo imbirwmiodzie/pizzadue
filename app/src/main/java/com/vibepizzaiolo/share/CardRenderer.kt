@@ -150,14 +150,20 @@ object CardRenderer {
         c.drawCircle(cx, cy, r * 0.6f, line)
 
         // ring text: upright on top, readable from below at the bottom
-        val ringPaint = mono(r * 0.19f, true, 0.16f).apply { color = INK }
-        val top = Path().apply { addArc(RectF(cx - r * 0.66f, cy - r * 0.66f, cx + r * 0.66f, cy + r * 0.66f), 180f, 180f) }
-        arcText(c, "FATTA A MANO", top, Math.PI.toFloat() * r * 0.66f, ringPaint)
-        val bottomArc = Path().apply { addArc(RectF(cx - r * 0.8f, cy - r * 0.8f, cx + r * 0.8f, cy + r * 0.8f), 180f, -180f) }
-        arcText(c, "CON AMORE", bottomArc, Math.PI.toFloat() * r * 0.8f, ringPaint)
-        val star = display(r * 0.14f).apply { color = INK; textAlign = Paint.Align.CENTER }
-        c.drawText("★", cx - r * 0.73f, cy + r * 0.05f, star)
-        c.drawText("★", cx + r * 0.73f, cy + r * 0.05f, star)
+        // the gold band runs from the red disc (0.6 r) to the dark line (0.86 r); letters sit in its middle.
+        // Top text grows outward from its baseline, bottom text grows inward, so the baselines differ.
+        val ringPaint = display(r * 0.155f).apply { color = INK; letterSpacing = 0.12f }
+        val capHalf = r * 0.155f * 0.36f
+        val bandMid = r * 0.73f
+        val topR = bandMid - capHalf
+        val bottomR = bandMid + capHalf
+        val top = Path().apply { addArc(RectF(cx - topR, cy - topR, cx + topR, cy + topR), 180f, 180f) }
+        arcText(c, "FATTA A MANO", top, Math.PI.toFloat() * topR, ringPaint)
+        val bottomArc = Path().apply { addArc(RectF(cx - bottomR, cy - bottomR, cx + bottomR, cy + bottomR), 180f, -180f) }
+        arcText(c, "CON AMORE", bottomArc, Math.PI.toFloat() * bottomR, ringPaint)
+        val star = display(r * 0.13f).apply { color = INK; textAlign = Paint.Align.CENTER }
+        c.drawText("★", cx - bandMid, cy + r * 0.045f, star)
+        c.drawText("★", cx + bandMid, cy + r * 0.045f, star)
 
         // centre
         val center = Paint.Align.CENTER
