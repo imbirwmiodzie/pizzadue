@@ -22,7 +22,8 @@ data class Settings(
     val forno: Boolean = true,
     val gira: Boolean = true,
     val bright: Boolean = true,
-    val maxVolume: Boolean = true,
+    /** Alarm volume while a timer runs, % of the phone's maximum. */
+    val volume: Int = 100,
     val vibrate: Boolean = false,
     val flash: Boolean = false,
     val voiceEn: Boolean = true,
@@ -55,7 +56,7 @@ class SettingsRepository(context: Context) {
         val forno = booleanPreferencesKey("forno")
         val gira = booleanPreferencesKey("gira")
         val bright = booleanPreferencesKey("bright")
-        val maxVolume = booleanPreferencesKey("max_volume")
+        val volume = intPreferencesKey("volume")
         val vibrate = booleanPreferencesKey("vibrate_v2")
         val flash = booleanPreferencesKey("flash")
         val voiceEn = booleanPreferencesKey("voice_en")
@@ -77,7 +78,7 @@ class SettingsRepository(context: Context) {
             forno = p[K.forno] ?: d.forno,
             gira = p[K.gira] ?: d.gira,
             bright = p[K.bright] ?: d.bright,
-            maxVolume = p[K.maxVolume] ?: d.maxVolume,
+            volume = p[K.volume] ?: d.volume,
             vibrate = p[K.vibrate] ?: d.vibrate,
             flash = p[K.flash] ?: d.flash,
             voiceEn = p[K.voiceEn] ?: d.voiceEn,
@@ -94,7 +95,7 @@ class SettingsRepository(context: Context) {
                 p[K.hydration] ?: d.hydration, p[K.salt] ?: d.salt, p[K.yeast] ?: d.yeast,
                 p[K.bakeSec] ?: d.bakeSec, p[K.preheatSec] ?: d.preheatSec,
                 p[K.ticks] ?: d.ticks, p[K.pronta] ?: d.pronta, p[K.forno] ?: d.forno, p[K.gira] ?: d.gira,
-                p[K.bright] ?: d.bright, p[K.maxVolume] ?: d.maxVolume, p[K.vibrate] ?: d.vibrate, p[K.flash] ?: d.flash,
+                p[K.bright] ?: d.bright, p[K.volume] ?: d.volume, p[K.vibrate] ?: d.vibrate, p[K.flash] ?: d.flash,
                 p[K.voiceEn] ?: d.voiceEn, p[K.voicePl] ?: d.voicePl,
                 p[K.balls] ?: d.balls, p[K.ballWeight] ?: d.ballWeight,
             )
@@ -109,7 +110,7 @@ class SettingsRepository(context: Context) {
             p[K.forno] = s.forno
             p[K.gira] = s.gira
             p[K.bright] = s.bright
-            p[K.maxVolume] = s.maxVolume
+            p[K.volume] = s.volume.coerceIn(10, 100)
             p[K.vibrate] = s.vibrate
             p[K.flash] = s.flash
             p[K.voiceEn] = s.voiceEn

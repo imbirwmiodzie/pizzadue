@@ -5,7 +5,7 @@ A voice‑driven pizza timer for Android. Three tabs:
 - **Timer**: preheat the oven (30 min), then bake (1:30). Say **“vai!”** / **“waj!”** to start, **“pizza out”** / **“wyjmij”** to stop.
 - **Dough**: dough balls (±1) and ball weight (±10 g) → grams of flour, water, salt and yeast. Hold − / + to step fast.
 - **Settings**: screen always on at full brightness (default on), hydration, salt and yeast (% of flour), times, ticks,
-  loudness (max volume, vibration off by default, flashlight), voice clips, languages.
+  loudness (beep volume slider, vibration off by default, flashlight), voice clips, languages.
 
 ## Install
 
@@ -24,8 +24,9 @@ A long beep marks every start. Bake (counted from “vai!”): 1 short tick at :
 Preheat: silent except 1 tick at ⅓, 2 ticks at ⅔, 3 ticks at the end, then “Forno a legna caldo” every 30 s
 until you say “vai!” or stop it. The timer then switches to Bake.
 
-Loudness: everything plays on the alarm stream with Android's loudness enhancer, alarm volume goes to maximum
-while a timer runs (and back afterwards), and vibration and a flashlight blink per tick can be turned on.
+Loudness: everything plays on the alarm stream with Android's loudness enhancer. **Beep volume** (Settings, 10–100%)
+sets the alarm volume while a timer runs, and your own level comes back afterwards; the phone's volume buttons also
+change it while the app is open, and vibration and a flashlight blink per tick can be turned on.
 
 ## Voice commands
 

@@ -7,7 +7,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,7 +27,13 @@ import com.pizzadue.voice.VoiceStatus
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsScreen(s: Settings, voice: VoiceStatus, update: ((Settings) -> Settings) -> Unit, preview: (Clip) -> Unit) {
+fun SettingsScreen(
+    s: Settings,
+    voice: VoiceStatus,
+    update: ((Settings) -> Settings) -> Unit,
+    preview: (Clip) -> Unit,
+    previewVolume: () -> Unit,
+) {
     fun step(v: Float, d: Float, range: ClosedFloatingPointRange<Float>) = ((v + d) * 100).roundToInt().div(100f).coerceIn(range)
 
     Column(
@@ -63,7 +77,7 @@ fun SettingsScreen(s: Settings, voice: VoiceStatus, update: ((Settings) -> Setti
 
         SectionLabel("Loudness")
         Group {
-            SwitchRow("Maximum alarm volume", "while a timer runs, then back to your level", s.maxVolume, { v -> update { it.copy(maxVolume = v) } })
+            VolumeRow(s.volume, onChange = { v -> update { it.copy(volume = v) } }, onDone = previewVolume)
             GroupDivider()
             SwitchRow("Vibrate with every tick", null, s.vibrate, { v -> update { it.copy(vibrate = v) } })
             GroupDivider()
@@ -94,6 +108,27 @@ fun SettingsScreen(s: Settings, voice: VoiceStatus, update: ((Settings) -> Setti
             VoiceStatus.Off -> "Voice is off."
         }
         Text(status, color = Pal.muted, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp, bottom = 16.dp))
+    }
+}
+
+@Composable
+private fun VolumeRow(percent: Int, onChange: (Int) -> Unit, onDone: () -> Unit) {
+    // local value so the slider moves smoothly; saved on every step
+    var value by remember(percent) { mutableFloatStateOf(percent.toFloat()) }
+    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RowLabel("Beep volume", "while a timer runs; your volume comes back after", Modifier.weight(1f))
+            Text("${value.roundToInt()}%", fontFamily = Mono, fontSize = 16.sp, color = Pal.flame)
+        }
+        Slider(
+            value = value,
+            onValueChange = { value = it; onChange(it.roundToInt()) },
+            onValueChangeFinished = onDone,
+            valueRange = 10f..100f,
+            steps = 8,
+            colors = SliderDefaults.colors(thumbColor = Pal.flame, activeTrackColor = Pal.flame, inactiveTrackColor = Pal.line),
+        )
+        Text("The phone's volume buttons also change it while the app is open.", color = Pal.muted, fontSize = 12.sp)
     }
 }
 

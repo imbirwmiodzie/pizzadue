@@ -61,13 +61,16 @@ class TimerService : Service() {
             settings.collect { s ->
                 player.vibrate = s.vibrate
                 player.flash = s.flash
-                player.maxVolume = s.maxVolume
+                player.volumePct = s.volume
             }
         }
         createChannel()
     }
 
+    private var lastStartId = 0
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        lastStartId = startId
         goForeground()
         when (intent?.action) {
             ACTION_START -> {
@@ -96,7 +99,7 @@ class TimerService : Service() {
             TimerState(mode = mode, phase = Phase.RUNNING, durationMs = durationMs, next = cues.firstOrNull())
         }
         acquireWake()
-        player.boostVolume()
+        player.timerStarted()
         player.startBeep()
         loopJob = scope.launch { runLoop() }
         notifyNow()
@@ -193,14 +196,15 @@ class TimerService : Service() {
     }
 
     private fun finishService() {
-        player.restoreVolume()
+        player.timerStopped()
         releaseWake()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        // only stop if no newer start arrived meanwhile (a quick "stop" then "vai!" must not kill the new timer)
+        stopSelfResult(lastStartId)
     }
 
     override fun onDestroy() {
-        player.restoreVolume()
+        if (!TimerRepository.state.value.isActive) player.timerStopped()
         releaseWake()
         scope.cancel()
         super.onDestroy()

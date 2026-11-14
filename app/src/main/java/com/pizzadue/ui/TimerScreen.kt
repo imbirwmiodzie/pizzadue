@@ -108,22 +108,24 @@ fun TimerScreen(state: TimerState, settings: Settings, voice: VoiceStatus, a: Ti
             }
         }
 
-        if (state.alert == Alert.FORNO) {
-            OutlinedButton(onClick = a.stop, modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, Pal.tomato)) {
-                Text("Forno a legna caldo! · Silence", color = Pal.tomato, fontWeight = FontWeight.SemiBold)
+        if (state.alert != Alert.NONE) {
+            OutlinedButton(onClick = a.stop, modifier = Modifier.fillMaxWidth().height(48.dp), border = BorderStroke(1.dp, Pal.tomato)) {
+                Text(
+                    if (state.alert == Alert.PRONTA) "La pizza è pronta! · Silence" else "Forno a legna caldo! · Silence",
+                    color = Pal.tomato, fontWeight = FontWeight.SemiBold,
+                )
             }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             val label = when {
-                state.phase == Phase.DONE -> "Pizza out"
                 state.isActive -> if (bake) "Pizza out" else "Stop preheat"
                 bake -> "Vai!"
                 else -> "Start preheat"
             }
             Button(
                 onClick = a.main,
-                colors = ButtonDefaults.buttonColors(containerColor = if (busy) Pal.tomato else accent, contentColor = Pal.ink),
+                colors = ButtonDefaults.buttonColors(containerColor = if (state.isActive) Pal.tomato else accent, contentColor = Pal.ink),
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.weight(1f).height(68.dp),
             ) { Text(label, fontSize = 24.sp, fontWeight = FontWeight.Bold) }

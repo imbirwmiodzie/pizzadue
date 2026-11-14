@@ -100,13 +100,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun preview(clip: Clip) = player.voice(clip)
+    fun previewVolume() = player.previewVolume()
 
     // ---- voice: start and stop only ----
     private fun onCommand(cmd: Command) {
         val st = timer.value
         when (cmd) {
             // already running: ignore, so a second "vai!" never restarts the bake by accident
-            Command.START -> if (!st.isActive && st.phase != Phase.DONE) {
+            // finished ("pronta!") counts as not running: "vai!" starts the next pizza
+            Command.START -> if (!st.isActive) {
                 _tab.value = AppTab.TIMER
                 startCurrent()
             }

@@ -46,13 +46,13 @@ fun App(vm: MainViewModel) {
                     TimerActions(
                         selectMode = vm::selectMode,
                         setDuration = vm::setDuration,
-                        main = { if (timer.isActive || timer.phase == Phase.DONE) vm.stop() else vm.startCurrent() },
+                        main = { if (timer.isActive) vm.stop() else vm.startCurrent() },
                         pauseResume = { if (timer.phase == Phase.PAUSED) vm.resume() else vm.pause() },
                         stop = vm::stop,
                     ),
                 )
                 AppTab.DOUGH -> DoughScreen(settings, voice, vm::updateSettings) { vm.selectTab(AppTab.SETTINGS) }
-                AppTab.SETTINGS -> SettingsScreen(settings, voice, vm::updateSettings, vm::preview)
+                AppTab.SETTINGS -> SettingsScreen(settings, voice, vm::updateSettings, vm::preview, vm::previewVolume)
             }
         }
     }

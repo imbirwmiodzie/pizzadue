@@ -40,7 +40,9 @@ class SoundPlayer private constructor(private val context: Context) {
     /** Options taken from Settings. */
     @Volatile var vibrate = true
     @Volatile var flash = false
-    @Volatile var maxVolume = true
+    /** Alarm volume while a timer runs, % of maximum. */
+    @Volatile var volumePct = 100
+        set(v) { field = v; if (timerHold) applyVolume() }
 
     private sealed interface Item {
         data class Ticks(val count: Int) : Item
@@ -112,17 +114,40 @@ class SoundPlayer private constructor(private val context: Context) {
 
     private var currentVoice: CancellableContinuation<Unit>? = null
 
-    /** Raises the alarm stream to maximum while the timer runs (if enabled). */
-    fun boostVolume() {
-        if (!maxVolume || savedAlarmVolume != null) return
-        runCatching {
-            savedAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0)
+    private var timerHold = false
+
+    /** A timer started: set the alarm stream to the chosen level (the user's own level is restored later). */
+    fun timerStarted() {
+        timerHold = true
+        applyVolume()
+    }
+
+    /** No timer any more: put the alarm volume back to what it was. */
+    fun timerStopped() {
+        timerHold = false
+        restoreVolume()
+    }
+
+    /** Plays one long tick at [volumePct], for the volume slider. */
+    fun previewVolume() {
+        applyVolume()
+        longTick()
+        scope.launch {
+            delay(1500)
+            if (!timerHold) restoreVolume()
         }
     }
 
-    /** Puts the alarm volume back to what it was before the timer started. */
-    fun restoreVolume() {
+    private fun applyVolume() {
+        runCatching {
+            if (savedAlarmVolume == null) savedAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+            val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            val level = (max * volumePct / 100f).toInt().coerceIn(1, max)
+            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, level, 0)
+        }
+    }
+
+    private fun restoreVolume() {
         val v = savedAlarmVolume ?: return
         savedAlarmVolume = null
         runCatching { audioManager.setStreamVolume(AudioManager.STREAM_ALARM, v, 0) }
