@@ -14,6 +14,7 @@ import android.graphics.Typeface
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.annotation.OptIn
+import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
@@ -171,7 +172,7 @@ class VideoMaker(private val context: Context) {
                 .build()
             return EditedMediaItem.Builder(item)
                 .setRemoveAudio(!keepAudio)
-                .setEffects(Effects(ImmutableList.of(), ImmutableList.of(presentation, OverlayEffect(ImmutableList.of(FrameOverlay(pool, draw))))))
+                .setEffects(Effects(ImmutableList.of(), ImmutableList.of<Effect>(presentation, OverlayEffect(ImmutableList.of(FrameOverlay(pool, draw))))))
                 .build()
         }
 
@@ -183,7 +184,7 @@ class VideoMaker(private val context: Context) {
                 .build()
             return EditedMediaItem.Builder(item)
                 .setFrameRate(30)
-                .setEffects(Effects(ImmutableList.of(), ImmutableList.of(presentation, OverlayEffect(ImmutableList.of(FrameOverlay(pool, draw))))))
+                .setEffects(Effects(ImmutableList.of(), ImmutableList.of<Effect>(presentation, OverlayEffect(ImmutableList.of(FrameOverlay(pool, draw))))))
                 .build()
         }
 
