@@ -141,9 +141,13 @@ class TimerService : Service() {
         return false
     }
 
-    /** Plays a voice clip [times] times, [everyMs] apart, unless stopped or "vai!" comes first. */
+    /**
+     * Plays a voice clip [times] times, [everyMs] apart, unless stopped or "vai!" comes first.
+     * The caller has already set the alert in the state; only an older alert's job is cancelled
+     * here, never the state (clearing it hid the "silence" control while the call kept playing).
+     */
     private fun startAlert(clip: Clip, enabled: Boolean, everyMs: Long, times: Int) {
-        cancelAlert()
+        alertJob?.cancel()
         notifyNow()
         alertJob = scope.launch {
             repeat(times) { i ->
