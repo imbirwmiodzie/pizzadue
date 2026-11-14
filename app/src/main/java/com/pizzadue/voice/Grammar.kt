@@ -44,7 +44,7 @@ object Grammar {
     private fun buildPl(): Map<String, Command> {
         val m = LinkedHashMap<String, Command>()
         m["start"] = Command.StartBake
-        listOf("rozgrzej piec", "grzej piec").forEach { m[it] = Command.StartPreheat }
+        m["rozgrzej piec"] = Command.StartPreheat
         listOf("wyjmij", "stop", "koniec").forEach { m[it] = Command.Stop }
         m["ile zostało"] = Command.TimeLeft
         m["pauza"] = Command.Pause
