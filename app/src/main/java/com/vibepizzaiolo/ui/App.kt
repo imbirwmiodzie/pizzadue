@@ -13,6 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.BakeryDining
+import androidx.compose.material.icons.outlined.LocalPizza
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vibepizzaiolo.community.CommunityViewModel
+import com.vibepizzaiolo.ui.community.CommunityScreen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -53,6 +57,7 @@ fun App(vm: MainViewModel) {
     val avatar by vm.avatar.collectAsStateWithLifecycle()
     val avatarBusy by vm.avatarBusy.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val community: CommunityViewModel = viewModel()
 
     // ---- photo for sharing: phone's camera app or the gallery ----
     var photoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -128,6 +133,11 @@ fun App(vm: MainViewModel) {
                         askSource = false
                         pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }) { Text("🖼  Photo from the gallery", color = Pal.fg) }
+                    TextButton(onClick = {
+                        askSource = false
+                        vm.selectTab(AppTab.COMMUNITY)
+                        community.askPhoto(true)
+                    }) { Text("🍕  Post it to the pizzaioli", color = Pal.fg) }
                 }
             },
             confirmButton = {},
@@ -206,6 +216,7 @@ fun App(vm: MainViewModel) {
                 val colors = NavigationBarItemDefaults.colors(indicatorColor = Pal.card, selectedIconColor = Pal.fg, selectedTextColor = Pal.fg, unselectedIconColor = Pal.muted, unselectedTextColor = Pal.muted)
                 NavigationBarItem(tab == AppTab.TIMER, { vm.selectTab(AppTab.TIMER) }, { Icon(Icons.Default.Timer, null) }, label = { Text("Timer") }, colors = colors)
                 NavigationBarItem(tab == AppTab.DOUGH, { vm.selectTab(AppTab.DOUGH) }, { Icon(Icons.Outlined.BakeryDining, null) }, label = { Text("Dough") }, colors = colors)
+                NavigationBarItem(tab == AppTab.COMMUNITY, { vm.selectTab(AppTab.COMMUNITY) }, { Icon(Icons.Outlined.LocalPizza, null) }, label = { Text("Pizzaioli") }, colors = colors)
                 NavigationBarItem(tab == AppTab.SETTINGS, { vm.selectTab(AppTab.SETTINGS) }, { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") }, colors = colors)
             }
         },
@@ -226,6 +237,7 @@ fun App(vm: MainViewModel) {
                     avatar = avatar,
                 )
                 AppTab.DOUGH -> DoughScreen(settings, voice, vm::updateSettings) { vm.selectTab(AppTab.SETTINGS) }
+                AppTab.COMMUNITY -> CommunityScreen(community, avatar)
                 AppTab.SETTINGS -> SettingsScreen(
                     settings, voice, vm::updateSettings, vm::preview, vm::previewVolume,
                     avatar = AvatarActions(avatar, avatarBusy, ::selfie, {

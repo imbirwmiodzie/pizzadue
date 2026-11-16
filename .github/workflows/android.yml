@@ -57,11 +57,20 @@ jobs:
             echo "No VIBEPIZZAIOLO_KEYSTORE_BASE64 secret: the release APK is signed with the debug key."
           fi
 
+      - name: Test the community server and start it for the app's client test
+        run: |
+          ./gradlew --no-daemon -p server test installDist
+          DATA_DIR="$RUNNER_TEMP/pizzaioli" PORT=8089 server/build/install/pizzaioli-server/bin/pizzaioli-server > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf localhost:8089/health && break; sleep 1; done
+          echo "COMMUNITY_TEST_URL=http://localhost:8089" >> "$GITHUB_ENV"
+
       - name: Test, lint, build
         env:
           VIBEPIZZAIOLO_KEYSTORE_PASSWORD: ${{ secrets.VIBEPIZZAIOLO_KEYSTORE_PASSWORD }}
           VIBEPIZZAIOLO_KEY_ALIAS: ${{ secrets.VIBEPIZZAIOLO_KEY_ALIAS }}
           VIBEPIZZAIOLO_KEY_PASSWORD: ${{ secrets.VIBEPIZZAIOLO_KEY_PASSWORD }}
+          # the community server's address, baked into the app; empty keeps the community on the phone
+          VIBEPIZZAIOLO_COMMUNITY_URL: ${{ vars.VIBEPIZZAIOLO_COMMUNITY_URL }}
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleRelease assembleDebug
 
       - name: Collect APKs

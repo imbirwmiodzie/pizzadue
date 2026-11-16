@@ -1,9 +1,10 @@
 # VibePizzaiolo
 
-A voice‑driven pizza timer for Android. Three tabs:
+A voice‑driven pizza timer for Android. Four tabs:
 
 - **Timer**: preheat the oven (30 min), then bake (1:30). Say **“vai!”** / **“waj!”** to start, **“pizza out”** / **“wyjmij”** to stop.
 - **Dough**: dough balls (±1) and ball weight (±10 g) → grams of flour, water, salt and yeast. Hold − / + to step fast.
+- **Pizzaioli**: swipe, search and comment other people's pizzas, post yours, and ask a pizzaiolo to eat together (see below).
 - **Settings**: screen always on at full brightness (default on), hydration, salt and yeast (% of flour), times, ticks,
   loudness (night mode, beep volume 5–100% default 40%, vibration off by default, flashlight), voice clips, languages.
 
@@ -39,6 +40,24 @@ Made on the phone with Media3 Transformer; shared like the cards (Instagram, Fac
 (flat colours and ink outlines), shows it as your icon on the Timer and puts it on the pizzaiolo at the end of every
 reel. Everything stays on the phone.
 
+## Pizzaioli: the community
+
+The **Pizzaioli** tab is a gallery of other people's pizzas that you judge by swiping.
+
+- **Account**: create one with a name, email and password, then answer four questions for your **style card**:
+  how spicy, red or white, which tradition (Napoletana, Romana, teglia, pinsa, New York, Detroit, Chicago…) and how hot you bake.
+- **Swipe**: right is *Buona!*, left is *Passo*. Tap a card for the details.
+- **Gallery**: every pizza, searchable by type (Margherita, Diavola…) and filterable by style, sauce, spice and oven temperature.
+- **Post**: the round camera button, or *Post it to the pizzaioli* in the share menu. The app proposes the type from the photo
+  and you confirm it; the rest is prefilled from your style card and your last bake.
+- **A pizza**: likes, comments, and **Mangiamo insieme?**, which asks its pizzaiolo to eat together. Once they accept, a chat opens under *Tavola*.
+
+**Without a server** the tab still works: the account, your pizzas and your swipes stay on the phone, the other pizzaioli
+are drawn samples (marked *sample*), and the type is guessed from the colours in the photo. With a server
+(see [server/README.md](server/README.md)) the same screens show real people, and the server can name the pizza with a vision model.
+Set its address under *Me → Server address*, or for every build with the repository variable `VIBEPIZZAIOLO_COMMUNITY_URL`.
+If the server does not answer when the tab opens, the app falls back to the phone and offers to try again.
+
 ## How it sounds
 
 A long beep marks every start. Bake (counted from “vai!”): 1 short tick at :15, 2 at :30, 3 at :45, one long tick on every full minute.
@@ -73,6 +92,7 @@ so the English list needs to be on for “vai!” to work.
 scripts/fetch_models.sh      # speech models into app/src/main/assets (not in git, ~160 MB)
 scripts/convert_voice.sh     # voice/ recordings -> app/src/main/res/raw (needs ffmpeg)
 ./gradlew testDebugUnitTest assembleDebug
+./gradlew -p server test      # the community server
 ```
 
 ## Release signing (optional)
