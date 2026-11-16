@@ -88,6 +88,25 @@ class Db(private val source: DataSource) {
                 user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 blocked_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 PRIMARY KEY (user_id, blocked_id))""",
+            // ---- pizza nights: no accounts, a host key and one key per guest ----
+            """CREATE TABLE IF NOT EXISTS parties (
+                code VARCHAR(16) PRIMARY KEY, host_key_hash VARCHAR(64) NOT NULL, title VARCHAR(60) NOT NULL,
+                when_text VARCHAR(60) NOT NULL, note VARCHAR(300) NOT NULL, stage VARCHAR(16) NOT NULL,
+                spare INT NOT NULL, spare_baked INT NOT NULL DEFAULT 0, created_at BIGINT NOT NULL)""",
+            """CREATE TABLE IF NOT EXISTS party_pizzas (
+                id VARCHAR(36) PRIMARY KEY, party_code VARCHAR(16) NOT NULL REFERENCES parties(code) ON DELETE CASCADE,
+                name VARCHAR(40) NOT NULL, note VARCHAR(120) NOT NULL, pos INT NOT NULL)""",
+            """CREATE TABLE IF NOT EXISTS party_guests (
+                id VARCHAR(36) PRIMARY KEY, party_code VARCHAR(16) NOT NULL REFERENCES parties(code) ON DELETE CASCADE,
+                name VARCHAR(30) NOT NULL, key_hash VARCHAR(64), is_host BOOLEAN NOT NULL DEFAULT FALSE, created_at BIGINT NOT NULL)""",
+            "CREATE INDEX IF NOT EXISTS party_guests_party ON party_guests(party_code)",
+            """CREATE TABLE IF NOT EXISTS party_orders (
+                guest_id VARCHAR(36) NOT NULL REFERENCES party_guests(id) ON DELETE CASCADE,
+                pizza_id VARCHAR(36) NOT NULL REFERENCES party_pizzas(id) ON DELETE CASCADE,
+                qty INT NOT NULL, baked INT NOT NULL DEFAULT 0, PRIMARY KEY (guest_id, pizza_id))""",
+            """CREATE TABLE IF NOT EXISTS party_bring (
+                id VARCHAR(36) PRIMARY KEY, party_code VARCHAR(16) NOT NULL REFERENCES parties(code) ON DELETE CASCADE,
+                name VARCHAR(40) NOT NULL, guest_id VARCHAR(36) REFERENCES party_guests(id) ON DELETE SET NULL, pos INT NOT NULL)""",
         )
     }
 }

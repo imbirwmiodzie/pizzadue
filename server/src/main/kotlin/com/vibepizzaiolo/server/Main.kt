@@ -27,6 +27,7 @@ fun refuse(status: HttpStatusCode, message: String): Nothing = throw ApiExceptio
 
 val AUTH_LIMIT = RateLimitName("auth")
 val WRITE_LIMIT = RateLimitName("write")
+val PARTY_LIMIT = RateLimitName("party")
 
 /** Settings come from the environment; see server/README.md. */
 fun main() {
@@ -70,6 +71,16 @@ fun Application.module(db: Db, photos: PhotoStore, classifier: Classifier?, now:
             rateLimiter(limit = 90, refillPeriod = 1.minutes)
             requestKey { call -> call.request.header("Authorization") ?: call.request.origin.remoteHost }
         }
+        // a pizza night: per guest or host key; a browser without one yet counts by address
+        register(PARTY_LIMIT) {
+            rateLimiter(limit = 120, refillPeriod = 1.minutes)
+            requestKey { call ->
+                call.request.header("Authorization")
+                    ?: call.request.header("X-Forwarded-For")?.substringBefore(',')?.trim()
+                    ?: call.request.origin.remoteHost
+            }
+        }
     }
     routes(Service(db, photos, now), photos, classifier)
+    partyRoutes(PartyService(db, now))
 }

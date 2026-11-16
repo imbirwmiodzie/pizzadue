@@ -37,12 +37,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.readByteArray
 
-private fun ApplicationCall.token(): String? = request.header(HttpHeaders.Authorization)?.removePrefix("Bearer ")?.trim()?.takeIf { it.isNotEmpty() }
+internal fun ApplicationCall.token(): String? = request.header(HttpHeaders.Authorization)?.removePrefix("Bearer ")?.trim()?.takeIf { it.isNotEmpty() }
 
 /** Database and disk work happens off the request threads. */
-private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
+internal suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 
-private fun ApplicationCall.param(name: String): String = parameters[name] ?: refuse(HttpStatusCode.BadRequest, "Missing $name.")
+internal fun ApplicationCall.param(name: String): String = parameters[name] ?: refuse(HttpStatusCode.BadRequest, "Missing $name.")
 
 private inline fun <reified E : Enum<E>> ApplicationCall.enumQuery(name: String): E? =
     request.queryParameters[name]?.let { v -> enumValues<E>().firstOrNull { it.name == v } ?: refuse(HttpStatusCode.BadRequest, "Unknown $name.") }
