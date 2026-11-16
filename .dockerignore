@@ -1,0 +1,8 @@
+# only the server and the shared data classes go into the image
+*
+!shared
+!server
+server/build
+server/.gradle
+server/data
+server/.env

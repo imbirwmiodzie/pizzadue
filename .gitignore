@@ -13,3 +13,6 @@ app/src/main/assets/voice/
 *.jks
 *.keystore
 !app/signing/vibepizzaiolo-dev.keystore
+# the community server's local data and secrets
+server/data/
+server/.env

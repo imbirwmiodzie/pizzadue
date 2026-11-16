@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 // Release signing comes from environment variables set by CI (see .github/workflows/android.yml).
@@ -19,6 +20,8 @@ android {
         targetSdk = 35
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = System.getenv("VIBEPIZZAIOLO_VERSION") ?: "0.1.0"
+        // The community server, e.g. https://pizza.example.com. Empty: the community runs on the phone only.
+        buildConfigField("String", "COMMUNITY_URL", "\"${System.getenv("VIBEPIZZAIOLO_COMMUNITY_URL") ?: ""}\"")
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
@@ -63,7 +66,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
+    // the community's data classes are shared with server/
+    sourceSets["main"].kotlin.srcDir("../shared/src")
     lint {
         abortOnError = true
         warningsAsErrors = false
@@ -72,6 +77,8 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
+        // screenshots in the headless screen test are drawn the way a phone draws them
+        unitTests.all { it.systemProperty("robolectric.pixelCopyRenderMode", "hardware") }
     }
 }
 
@@ -88,6 +95,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     // on-phone video editing for the pizza reel
     implementation("androidx.media3:media3-transformer:1.4.1")
@@ -102,4 +110,9 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("androidx.test:core:1.6.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    // the community screens are driven end to end in a headless test
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

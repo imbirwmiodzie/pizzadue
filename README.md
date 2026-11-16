@@ -1,9 +1,13 @@
 # VibePizzaiolo
 
-A voice‑driven pizza timer for Android. Three tabs:
+A voice‑driven pizza timer for Android. Four tabs:
 
 - **Timer**: preheat the oven (30 min), then bake (1:30). Say **“vai!”** / **“waj!”** to start, **“pizza out”** / **“wyjmij”** to stop.
 - **Dough**: dough balls (±1) and ball weight (±10 g) → grams of flour, water, salt and yeast. Hold − / + to step fast.
+- **Pizzaioli**: swipe, search and comment other people's pizzas, post yours, and ask a pizzaiolo to eat together (see below).
+- **Serata**: a pizza night with friends: they order through one link in the browser, the app counts the dough and
+  keeps the baking queue (see below).
+- **Pizzaioli**: the community: post, swipe and search pizzas.
 - **Settings**: screen always on at full brightness (default on), hydration, salt and yeast (% of flour), times, ticks,
   loudness (night mode, beep volume 5–100% default 40%, vibration off by default, flashlight), voice clips, languages.
 
@@ -39,6 +43,44 @@ Made on the phone with Media3 Transformer; shared like the cards (Instagram, Fac
 (flat colours and ink outlines), shows it as your icon on the Timer and puts it on the pizzaiolo at the end of every
 reel. Everything stays on the phone.
 
+## Pizzaioli: the community
+
+The **Pizzaioli** tab is a gallery of other people's pizzas that you judge by swiping.
+
+- **Account**: create one with a name, email and password, then answer four questions for your **style card**:
+  how spicy, red or white, which tradition (Napoletana, Romana, teglia, pinsa, New York, Detroit, Chicago…) and how hot you bake.
+- **Swipe**: right is *Buona!*, left is *Passo*. Tap a card for the details.
+- **Gallery**: every pizza, searchable by type (Margherita, Diavola…) and filterable by style, sauce, spice and oven temperature.
+- **Post**: the round camera button, or *Post it to the pizzaioli* in the share menu. The app proposes the type from the photo
+  and you confirm it; the rest is prefilled from your style card and your last bake.
+- **A pizza**: likes, comments, and **Mangiamo insieme?**, which asks its pizzaiolo to eat together. Once they accept, a chat opens under *Tavola*.
+
+**Without a server** the tab still works: the account, your pizzas and your swipes stay on the phone, the other pizzaioli
+are drawn samples (marked *sample*), and the type is guessed from the colours in the photo. With a server
+(see [server/README.md](server/README.md)) the same screens show real people, and the server can name the pizza with a vision model.
+Set its address under *Me → Server address*, or for every build with the repository variable `VIBEPIZZAIOLO_COMMUNITY_URL`.
+If the server does not answer when the tab opens, the app falls back to the phone and offers to try again.
+
+## Serata: a pizza night with friends
+
+The **Serata** tab organises a shared bake. It needs the server (`server/README.md`), because friends take part
+through a link, without installing anything:
+
+1. **Before**: *New pizza night* → name, when, tonight's menu, a list of things to bring, spare dough balls →
+   **Share the link** (WhatsApp or anything else). Friends open it in the browser, type their name and pick their
+   pizzas; they also see who brings what and can take an item. No account: the browser remembers who it is, and a
+   browser that forgot taps its name. You can write in a guest without a phone and order for them.
+2. **The board** shows the orders per pizza and per person and the dough for the night (ordered pizzas + spare balls,
+   with flour, water, salt and yeast from your Dough settings); one tap sets the Dough tab to that number of balls.
+3. **The bake**: *Close orders · start the bake*. Friends' phones now show only “The bake is on. Put your phone away.”
+   Your phone shows the queue: the test pizza first, then one pizza each before anybody gets a second. The Timer tab
+   says whose pizza is next, and every finished bake (“pizza out”) ticks the next one by itself; taps on the queue
+   correct it.
+4. **After**: *Finish the night*; the link then says grazie.
+
+The guests' page speaks Polish or English, whichever the phone is set to. This tab is separate from **Pizzaioli**
+(the public community with swiping); the two only share the server address.
+
 ## How it sounds
 
 A long beep marks every start. Bake (counted from “vai!”): 1 short tick at :15, 2 at :30, 3 at :45, one long tick on every full minute.
@@ -73,6 +115,7 @@ so the English list needs to be on for “vai!” to work.
 scripts/fetch_models.sh      # speech models into app/src/main/assets (not in git, ~160 MB)
 scripts/convert_voice.sh     # voice/ recordings -> app/src/main/res/raw (needs ffmpeg)
 ./gradlew testDebugUnitTest assembleDebug
+./gradlew -p server test      # the community server
 ```
 
 ## Release signing (optional)

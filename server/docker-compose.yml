@@ -1,0 +1,50 @@
+# The whole community server on one machine: the API, PostgreSQL, and Caddy for HTTPS.
+#   cp .env.example .env    # set DOMAIN and DB_PASSWORD
+#   docker compose up -d --build
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/pizzaioli
+      DATABASE_USER: pizzaioli
+      DATABASE_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      # optional: lets the server name the pizza on a photo; without it the app guesses from colours
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CLASSIFIER_MODEL: ${CLASSIFIER_MODEL:-claude-opus-5-5}
+    volumes:
+      - photos:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pizzaioli
+      POSTGRES_USER: pizzaioli
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pizzaioli"]
+      interval: 5s
+      retries: 10
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy:/data
+
+volumes:
+  photos:
+  db:
+  caddy:
