@@ -39,6 +39,13 @@ with a finger press), then the phone's camera records up to 20 s. The app edits 
 falling onto the pizza with a thud → the ending with the cartoon pizzaiolo waving and *“La pizza è pronta!”*.
 Made on the phone with Media3 Transformer; shared like the cards (Instagram, Facebook, WhatsApp, more, save).
 
+**In the browser, nothing to install**: the server (see [server/README.md](server/README.md)) also serves the reel as a
+web page at `https://<server>/reel`. Tap *Open the camera*, then the red button: the page counts down and says what to
+film (3 s from above, 9 s around, 5 s on the rim) while it records, keeping only the seconds that go into the reel, then
+adds the seal and the ending with the pizzaiolo and the voice. It films at 1080p / 30 fps without HDR whatever the camera
+app is set to, works in Chrome and Safari (MP4; other browsers save WebM), and makes the reel on the phone: nothing is
+uploaded. Add `?n=12&bake=92` to the link to print the pizza number and the bake time (seconds).
+
 **You as the pizzaiolo**: Settings → *You, the pizzaiolo* → Selfie. The app finds your face, draws it as a cartoon
 (flat colours and ink outlines), shows it as your icon on the Timer and puts it on the pizzaiolo at the end of every
 reel. Everything stays on the phone.

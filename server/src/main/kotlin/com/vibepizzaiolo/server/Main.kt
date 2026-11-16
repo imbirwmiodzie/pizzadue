@@ -83,4 +83,5 @@ fun Application.module(db: Db, photos: PhotoStore, classifier: Classifier?, now:
     }
     routes(Service(db, photos, now), photos, classifier)
     partyRoutes(PartyService(db, now))
+    reelRoutes()
 }
