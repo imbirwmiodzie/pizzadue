@@ -13,10 +13,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.outlined.BakeryDining
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.LocalPizza
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vibepizzaiolo.community.CommunityViewModel
 import com.vibepizzaiolo.ui.community.CommunityScreen
+import com.vibepizzaiolo.party.PartyStage
+import com.vibepizzaiolo.party.PartyViewModel
+import com.vibepizzaiolo.ui.party.NextUpBanner
+import com.vibepizzaiolo.ui.party.PartyScreen
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -58,6 +64,15 @@ fun App(vm: MainViewModel) {
     val avatarBusy by vm.avatarBusy.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val community: CommunityViewModel = viewModel()
+    val party: PartyViewModel = viewModel()
+    val partyUi by party.ui.collectAsStateWithLifecycle()
+    // a pizza night in progress is fetched at once, so the timer can say whose pizza is next
+    LaunchedEffect(Unit) { party.start() }
+    val baking = partyUi.party?.stage == PartyStage.BAKING
+    LaunchedEffect(tab, baking) {
+        // the banner above the timer follows what is ticked on the Serata tab or by a bake
+        if (tab == AppTab.TIMER && baking) while (true) { kotlinx.coroutines.delay(10_000); party.refresh() }
+    }
 
     // ---- photo for sharing: phone's camera app or the gallery ----
     var photoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -216,6 +231,7 @@ fun App(vm: MainViewModel) {
                 val colors = NavigationBarItemDefaults.colors(indicatorColor = Pal.card, selectedIconColor = Pal.fg, selectedTextColor = Pal.fg, unselectedIconColor = Pal.muted, unselectedTextColor = Pal.muted)
                 NavigationBarItem(tab == AppTab.TIMER, { vm.selectTab(AppTab.TIMER) }, { Icon(Icons.Default.Timer, null) }, label = { Text("Timer") }, colors = colors)
                 NavigationBarItem(tab == AppTab.DOUGH, { vm.selectTab(AppTab.DOUGH) }, { Icon(Icons.Outlined.BakeryDining, null) }, label = { Text("Dough") }, colors = colors)
+                NavigationBarItem(tab == AppTab.PARTY, { vm.selectTab(AppTab.PARTY) }, { Icon(Icons.Outlined.Groups, null) }, label = { Text("Serata") }, colors = colors)
                 NavigationBarItem(tab == AppTab.COMMUNITY, { vm.selectTab(AppTab.COMMUNITY) }, { Icon(Icons.Outlined.LocalPizza, null) }, label = { Text("Pizzaioli") }, colors = colors)
                 NavigationBarItem(tab == AppTab.SETTINGS, { vm.selectTab(AppTab.SETTINGS) }, { Icon(Icons.Default.Settings, null) }, label = { Text("Settings") }, colors = colors)
             }
@@ -223,20 +239,28 @@ fun App(vm: MainViewModel) {
     ) { pad ->
         Box(Modifier.fillMaxSize().padding(pad)) {
             when (tab) {
-                AppTab.TIMER -> TimerScreen(
-                    timer, settings, voice,
-                    TimerActions(
-                        selectMode = vm::selectMode,
-                        setDuration = vm::setDuration,
-                        main = { if (timer.isActive) vm.stop() else vm.startCurrent() },
-                        pauseResume = { if (timer.phase == Phase.PAUSED) vm.resume() else vm.pause() },
-                        stop = vm::stop,
-                        share = { askSource = true },
-                    ),
-                    justBaked = justBaked,
-                    avatar = avatar,
-                )
+                AppTab.TIMER -> Column(Modifier.fillMaxSize()) {
+                    // during a pizza night: whose pizza goes in next, above the timer
+                    val night = partyUi.party?.takeIf { it.stage == PartyStage.BAKING }
+                    if (night != null) NextUpBanner(night) { vm.selectTab(AppTab.PARTY) }
+                    Box(Modifier.weight(1f)) {
+                        TimerScreen(
+                            timer, settings, voice,
+                            TimerActions(
+                                selectMode = vm::selectMode,
+                                setDuration = vm::setDuration,
+                                main = { if (timer.isActive) vm.stop() else vm.startCurrent() },
+                                pauseResume = { if (timer.phase == Phase.PAUSED) vm.resume() else vm.pause() },
+                                stop = vm::stop,
+                                share = { askSource = true },
+                            ),
+                            justBaked = justBaked,
+                            avatar = avatar,
+                        )
+                    }
+                }
                 AppTab.DOUGH -> DoughScreen(settings, voice, vm::updateSettings) { vm.selectTab(AppTab.SETTINGS) }
+                AppTab.PARTY -> PartyScreen(party, settings) { vm.selectTab(AppTab.TIMER) }
                 AppTab.COMMUNITY -> CommunityScreen(community, avatar)
                 AppTab.SETTINGS -> SettingsScreen(
                     settings, voice, vm::updateSettings, vm::preview, vm::previewVolume,

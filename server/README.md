@@ -3,8 +3,11 @@
 The community behind the app's **Pizzaioli** tab: accounts, photos, swipes, comments and
 "Mangiamo insieme?" invitations. Kotlin + Ktor, PostgreSQL, photos on disk.
 
-The app works without it (everything then stays on the phone, with sample pizzaioli), so this can
-be set up whenever you are ready.
+It also runs the app's **Serata** tab (pizza nights): the page friends open from a link to pick
+their pizzas, and the orders behind it.
+
+The Pizzaioli tab works without the server (everything then stays on the phone, with sample
+pizzaioli); a pizza night needs it, because friends join through a link.
 
 ## Try it on your computer
 
@@ -30,7 +33,7 @@ With no settings it keeps its data in `server/data/` (an H2 database file and th
    curl https://$DOMAIN/health    # -> ok
    ```
 
-5. Tell the app: in the Pizzaioli tab, **Server address** → `https://your.domain`. To bake it into
+5. Tell the app: in the Pizzaioli or the Serata tab, **Server address** → `https://your.domain`. To bake it into
    every build instead, add the repository variable `VIBEPIZZAIOLO_COMMUNITY_URL`.
 
 Back up the two Docker volumes `server_db` and `server_photos`; that is all the state there is.
@@ -61,6 +64,28 @@ Back up the two Docker volumes `server_db` and `server_photos`; that is all the 
 
 Sign-up and login are limited to 10 a minute per address, everything else to 90 a minute per login.
 
+### Pizza nights (Serata)
+
+Nobody logs in. The code in the link invites; creating a night returns a **host key** that stays on the
+pizzaiolo's phone; joining returns a **guest key** that stays in that browser. Both travel as
+`Authorization: Bearer …` and are stored hashed.
+
+| | |
+|---|---|
+| `GET /p/{code}` | the guests' page (one HTML page with its script and style under `/party/`), served with a strict Content-Security-Policy |
+| `POST /parties` | a new night: title, host name, when, note, menu, things to bring, spare balls → the night, its host key |
+| `GET /parties/{code}` | the night, and who is asking (guest id, host or not) |
+| `PUT`/`DELETE /parties/{code}`, `POST /parties/{code}/stage` | host: edit (orders of pizzas that stay are kept), delete, `ORDERS` → `BAKING` → `DONE` |
+| `POST /parties/{code}/join`, `/claim` | a guest enters with a name; a browser that forgot taps its name and gets a fresh key (friends are trusted with the link; the pizzaiolo cannot be claimed) |
+| `POST /parties/{code}/guests`, `DELETE /parties/{code}/guests/{id}` | host: write in a guest without a phone, take somebody off the list |
+| `PUT /parties/{code}/guests/{id}/order` | a guest's whole order; guests only for themselves and only while orders are open |
+| `PUT /parties/{code}/bring/{item}` | take a free item or give it back; the host assigns anything to anybody |
+| `POST /parties/{code}/baked` | host: tick a pizza in the queue |
+
+Creating a night is limited to 10 a minute per address, the rest to 120 a minute per key (or per
+address for a browser that has none yet). A night has at most 40 guests, 12 pizzas and 40 things to
+bring, and is deleted 60 days after it was created.
+
 Not there yet: email verification and password reset (both need an email sender), push
 notifications, and an admin view of reports (they are in the `reports` table).
 
@@ -68,5 +93,5 @@ notifications, and an admin view of reports (they are in the `reports` table).
 
 ```bash
 ./gradlew -p server test                                  # the API against an in-memory database
-COMMUNITY_TEST_URL=http://localhost:8080 ./gradlew testDebugUnitTest --tests '*RemoteCommunityTest*'   # the app's client against a running server
+COMMUNITY_TEST_URL=http://localhost:8080 ./gradlew testDebugUnitTest --tests '*Remote*' --tests '*PartyScreenTest*'   # the app's clients and the Serata screens against a running server
 ```
