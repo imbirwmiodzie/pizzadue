@@ -11,6 +11,7 @@ import com.vibepizzaiolo.timer.TimerRepository
 import com.vibepizzaiolo.timer.TimerService
 import com.vibepizzaiolo.timer.TimerState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -89,5 +90,31 @@ class TimerServiceTest {
         deliver(c)
         idle(2_000)
         assertEquals(Phase.RUNNING, state.phase)
+    }
+
+    /** The usual second pizza: the first call ended by itself, the service is gone, a new one starts. */
+    @Test fun nextPizzaStartsOnAFreshServiceAfterTheFirstEnded() {
+        val first = bakeUntilDone()
+        idle(TimerService.ALERT_TIMES * 10_000L + 5_000)
+        assertTrue(shadowOf(first.get()).isStoppedBySelf)
+        first.destroy()
+
+        TimerService.start(app, Mode.BAKE, 20_000)
+        val second = Robolectric.buildService(TimerService::class.java).create()
+        deliver(second)
+        idle(5_000)
+        assertEquals(Phase.RUNNING, state.phase)
+        assertEquals(5_000.0, state.elapsedMs.toDouble(), 300.0)
+        idle(16_000)
+        assertEquals(Alert.PRONTA, state.alert)
+    }
+
+    @Test fun pauseWithNothingRunningDoesNotLeaveTheServiceUp() {
+        TimerService.pause(app)
+        val c = Robolectric.buildService(TimerService::class.java).create()
+        deliver(c)
+        idle(100)
+        assertEquals(Phase.IDLE, state.phase)
+        assertTrue(shadowOf(c.get()).isStoppedBySelf)
     }
 }

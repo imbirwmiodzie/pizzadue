@@ -42,10 +42,11 @@ reel. Everything stays on the phone.
 ## How it sounds
 
 A long beep marks every start. Bake (counted from “vai!”): 1 short tick at :15, 2 at :30, 3 at :45, one long tick on every full minute.
-“Gira, gira!” at half time. At the end “La pizza è pronta!” repeats every 10 s until you say “pizza out” / “wyjmij”.
+“Gira, gira!” at half time. At the end “La pizza è pronta!” is called 3 times, 10 s apart; tap the screen, press a volume
+button or say “pizza out” / “wyjmij” to silence it, or tap **Vai!** / say “vai!” to start the next pizza at once.
 
-Preheat: silent except 1 tick at ⅓, 2 ticks at ⅔, 3 ticks at the end, then “Forno a legna caldo” every 30 s
-until you say “vai!” or stop it. The timer then switches to Bake.
+Preheat: silent except 1 tick at ⅓, 2 ticks at ⅔, 3 ticks at the end, then “Forno a legna caldo” 3 times, 30 s apart,
+until you say “vai!” or silence it. The timer then switches to Bake.
 
 Loudness: by default everything plays as an alarm sound, so it is heard even when the phone is on silent and always
 comes from the phone's speaker; **Play as alarm** off switches to media sound (media volume, Bluetooth/headphones). **Beep volume**

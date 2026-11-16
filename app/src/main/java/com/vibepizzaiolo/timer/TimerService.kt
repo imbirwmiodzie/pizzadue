@@ -27,9 +27,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -55,10 +53,12 @@ class TimerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        settings = SettingsRepository.get(this).flow.stateIn(scope, SharingStarted.Eagerly, Settings())
+        // the saved settings, already loaded: a service made for the next pizza must not start from the defaults
+        val repo = SettingsRepository.get(this)
+        settings = repo.state
         player = SoundPlayer.get(this)
         scope.launch {
-            settings.collect { s -> player.configure(s) }
+            repo.flow.collect { s -> player.configure(s) }
         }
         createChannel()
     }
@@ -75,11 +75,17 @@ class TimerService : Service() {
                 start(mode, ms)
             }
             ACTION_STOP -> stopAll()
-            ACTION_PAUSE -> pause()
-            ACTION_RESUME -> resume()
-            else -> if (!TimerRepository.state.value.isActive) stopAll()
+            ACTION_PAUSE -> { pause(); stopIfIdle() }
+            ACTION_RESUME -> { resume(); stopIfIdle() }
+            else -> stopIfIdle()
         }
         return START_NOT_STICKY
+    }
+
+    /** A command that found nothing to act on must not leave an empty foreground service (and its notification) behind. */
+    private fun stopIfIdle() {
+        val st = TimerRepository.state.value
+        if (st.phase == Phase.IDLE && st.alert == Alert.NONE) stopAll()
     }
 
     private fun start(mode: Mode, durationMs: Long) {

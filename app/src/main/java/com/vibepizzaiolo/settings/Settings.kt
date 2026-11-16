@@ -9,8 +9,14 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 data class Settings(
     val hydration: Float = 70f,
@@ -116,6 +122,13 @@ class SettingsRepository(context: Context) {
             ballWeight = p[K.ballWeight] ?: d.ballWeight,
         )
     }
+
+    /**
+     * The latest settings, kept loaded for the life of the process. Read this where the value is
+     * needed at once (the timer service); a fresh `stateIn` would hand out the defaults first.
+     */
+    val state: StateFlow<Settings> =
+        flow.stateIn(CoroutineScope(SupervisorJob() + Dispatchers.Default), SharingStarted.Eagerly, Settings())
 
     suspend fun update(transform: (Settings) -> Settings) {
         store.edit { p ->

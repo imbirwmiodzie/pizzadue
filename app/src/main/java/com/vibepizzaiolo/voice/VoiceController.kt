@@ -102,7 +102,9 @@ class VoiceController(
             val ctx = kotlin.coroutines.coroutineContext
             while (ctx.isActive) {
                 val n = record.read(buf, 0, buf.size)
-                if (n <= 0) continue
+                // a dead microphone must show as an error, not as "listening" that never hears anything
+                if (n < 0) throw IllegalStateException("Microphone stopped (error $n). Reopen the app.")
+                if (n == 0) continue
                 if (MicGate.isMuted) {
                     // the app itself is talking: do not listen to it
                     if (!wasMuted) recognizers.forEach { it.second.reset() }

@@ -78,36 +78,57 @@ private val PREHEAT_PRESETS = listOf(20 * 60, 30 * 60, 45 * 60)
 fun TimerScreen(state: TimerState, settings: Settings, voice: VoiceStatus, a: TimerActions, justBaked: Boolean, avatar: Bitmap? = null) {
     Box(Modifier.fillMaxSize()) {
         TimerContent(state, settings, voice, a, justBaked, avatar)
-        if (state.alert != Alert.NONE) SilenceOverlay(state.alert, a.stop)
+        if (state.alert != Alert.NONE) SilenceOverlay(state.alert, onSilence = a.stop, onStart = a.main)
     }
 }
 
-/** While the end call plays, the whole screen is one big "silence" button: no aiming with floury hands. */
+/**
+ * While the end call plays, the whole screen is one big "silence" button: no aiming with floury hands.
+ * "Vai!" stays where it always is and starts the next bake straight away (which also ends the call);
+ * hidden under the overlay, a tap on it only silenced and the next pizza baked with no timer.
+ */
 @Composable
-private fun SilenceOverlay(alert: Alert, onSilence: () -> Unit) {
+private fun SilenceOverlay(alert: Alert, onSilence: () -> Unit, onStart: () -> Unit) {
     Surface(
         onClick = onSilence,
         color = Pal.bg.copy(alpha = 0.88f),
         modifier = Modifier.fillMaxSize(),
     ) {
+        // same paddings and button size as the timer underneath, so "Vai!" does not move
         Column(
-            Modifier.fillMaxSize().padding(24.dp),
-            verticalArrangement = Arrangement.Center,
+            Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                if (alert == Alert.PRONTA) "La pizza è pronta!" else "Forno a legna caldo!",
-                color = Pal.tomato, fontSize = 34.sp, fontWeight = FontWeight.Bold,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
-            Text(
-                "Tap anywhere to silence",
-                color = Pal.fg, fontSize = 18.sp, modifier = Modifier.padding(top = 16.dp),
-            )
-            Text(
-                "or press a volume button, or say “stop”",
-                color = Pal.muted, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp),
-            )
+            Column(
+                Modifier.weight(1f).fillMaxWidth().padding(8.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    if (alert == Alert.PRONTA) "La pizza è pronta!" else "Forno a legna caldo!",
+                    color = Pal.tomato, fontSize = 34.sp, fontWeight = FontWeight.Bold,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+                Text(
+                    "Tap anywhere to silence",
+                    color = Pal.fg, fontSize = 18.sp, modifier = Modifier.padding(top = 16.dp),
+                )
+                Text(
+                    "or press a volume button, or say “stop”",
+                    color = Pal.muted, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            Button(
+                onClick = onStart,
+                colors = ButtonDefaults.buttonColors(containerColor = Pal.flame, contentColor = Pal.ink),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.fillMaxWidth().height(68.dp),
+            ) {
+                Text(
+                    if (alert == Alert.PRONTA) "Vai!  Next pizza" else "Vai!  Pizza in",
+                    fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }
