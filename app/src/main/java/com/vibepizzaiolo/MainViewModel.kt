@@ -220,9 +220,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _video.value = VideoUi.Failed(
-                    (e as? IllegalArgumentException)?.message ?: "Could not make the reel (${e.javaClass.simpleName}). Try recording again."
-                )
+                _video.value = VideoUi.Failed(VideoMaker.explain(e))
             }
         }
     }
