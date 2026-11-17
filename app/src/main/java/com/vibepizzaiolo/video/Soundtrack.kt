@@ -7,15 +7,28 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * Writes the reel's extra sound as a WAV file: silence with a whoosh and a heavy "thud" where
- * the quality seal lands. The original crunch and the voice clip are mixed in separately.
+ * Writes the reel's whole sound as one WAV file: the real crunch of the rim and the voice clip
+ * ([layers], each placed at its time), plus a whoosh and a heavy "thud" where the quality seal lands.
+ * Mixing it here, and handing Media3 a single audio file, keeps Media3 from joining sounds of
+ * different formats across items, which crashed on some phones.
  */
 object Soundtrack {
-    private const val RATE = 44_100
+    const val RATE = 44_100
 
-    fun write(file: File, lengthMs: Long, stampAtMs: Long) {
+    /** A sound to mix in: mono samples at [RATE], starting at [atMs] into the reel. */
+    class Layer(val atMs: Long, val samples: FloatArray)
+
+    fun write(file: File, lengthMs: Long, stampAtMs: Long, layers: List<Layer> = emptyList()) {
         val n = (RATE * lengthMs / 1000).toInt()
         val pcm = FloatArray(n)
+        for (layer in layers) {
+            val start = (layer.atMs * RATE / 1000).toInt()
+            for (i in layer.samples.indices) {
+                val j = start + i
+                if (j >= n) break
+                if (j >= 0) pcm[j] += layer.samples[i]
+            }
+        }
         // whoosh as the seal comes down: filtered noise rising in pitch
         val rnd = java.util.Random(7)
         val wStart = ((stampAtMs - 450) * RATE / 1000).toInt().coerceAtLeast(0)
