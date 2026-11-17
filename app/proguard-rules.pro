@@ -7,3 +7,5 @@
 
 # Keep exception class names readable in error messages and logs.
 -keepnames class * extends java.lang.Throwable
+# Keep Media3's class and method names (still shrunk) so a failed reel says where it failed.
+-keepnames class androidx.media3.** { *; }

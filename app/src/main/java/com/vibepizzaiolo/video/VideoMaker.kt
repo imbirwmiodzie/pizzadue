@@ -19,7 +19,6 @@ import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.RawResourceDataSource
 import androidx.media3.effect.BitmapOverlay
 import androidx.media3.effect.OverlayEffect
 import androidx.media3.effect.Presentation
@@ -103,14 +102,19 @@ class VideoMaker(private val context: Context) {
          */
         fun explain(e: Throwable): String {
             if (e is IllegalArgumentException && e.message != null) return e.message!!
-            val code = (e as? ExportException)?.errorCodeName ?: e.javaClass.name
+            val code = (e as? ExportException)?.let {
+                if (it.errorCode == ExportException.ERROR_CODE_UNSPECIFIED) "ERROR_CODE_UNSPECIFIED" else it.errorCodeName
+            } ?: e.javaClass.name
             val hint = when ((e as? ExportException)?.errorCode ?: 0) {
                 in 2000..2999 -> "The recording could not be opened. Try recording again."
                 in 3000..5999 -> "This phone could not convert the video. In the camera settings choose 1080p at 30 fps with HDR off, then record again."
                 else -> "Try recording again."
             }
+            // the innermost cause says what broke; where it was thrown helps when it has no message
             val root = generateSequence(e) { it.cause }.last()
-            val detail = root.message?.take(160)?.let { ": $it" } ?: ""
+            val at = root.stackTrace.firstOrNull { f -> !f.className.endsWith("Assertions") && !f.className.endsWith("Preconditions") }?.let { " at ${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" } ?: ""
+            val detail = if (root === e) (root.message?.take(160)?.let { ": $it" } ?: "")
+            else ": ${root.javaClass.simpleName}${root.message?.take(160)?.let { " $it" } ?: ""}$at"
             return "Could not make the reel. $hint\n($code$detail)"
         }
     }
@@ -155,9 +159,14 @@ class VideoMaker(private val context: Context) {
             }
             val outroFile = File(dir, "outro.png").also { f -> f.outputStream().use { outro.compress(Bitmap.CompressFormat.PNG, 100, it) } }
 
-            val clipsMs = (plan.top.last - plan.top.first) + plan.around.sumOf { it.last - it.first } + (plan.rim.last - plan.rim.first)
+            val beforeRimMs = (plan.top.last - plan.top.first) + plan.around.sumOf { it.last - it.first }
+            val clipsMs = beforeRimMs + (plan.rim.last - plan.rim.first)
+            val layers = listOfNotNull(
+                AudioClip.fromUri(context, video, plan.rim.first, plan.rim.last)?.let { Soundtrack.Layer(beforeRimMs, it) },
+                AudioClip.fromRaw(context, R.raw.voice_pronta)?.let { Soundtrack.Layer(clipsMs + STAMP_MS + VOICE_AT_MS, it) },
+            )
             val soundFile = File(dir, "soundtrack.wav")
-            Soundtrack.write(soundFile, lengthMs = clipsMs + STAMP_MS + VOICE_AT_MS, stampAtMs = clipsMs + STAMP_HIT_MS)
+            Soundtrack.write(soundFile, lengthMs = clipsMs + STAMP_MS + OUTRO_MS, stampAtMs = clipsMs + STAMP_HIT_MS, layers = layers)
             return Prepared(plan, stampFile, outroFile, soundFile)
         } finally {
             runCatching { mmr.release() }
@@ -179,7 +188,7 @@ class VideoMaker(private val context: Context) {
         val pool = OverlayPool(W, H)
         val presentation = Presentation.createForWidthAndHeight(W, H, Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP)
 
-        fun clip(range: LongRange, keepAudio: Boolean, draw: (Canvas, Float) -> Unit): EditedMediaItem {
+        fun clip(range: LongRange, draw: (Canvas, Float) -> Unit): EditedMediaItem {
             val item = MediaItem.Builder()
                 .setUri(video)
                 .setClippingConfiguration(
@@ -190,7 +199,7 @@ class VideoMaker(private val context: Context) {
                 )
                 .build()
             return EditedMediaItem.Builder(item)
-                .setRemoveAudio(!keepAudio)
+                .setRemoveAudio(true)
                 .setEffects(Effects(ImmutableList.of(), ImmutableList.of<Effect>(presentation, OverlayEffect(ImmutableList.of(FrameOverlay(pool, draw))))))
                 .build()
         }
@@ -210,19 +219,16 @@ class VideoMaker(private val context: Context) {
         val p = prep.plan
         val clock = CardRenderer.clock(info.bakeMs)
         val videoItems = ImmutableList.of(
-            clip(p.top, false) { c, t -> brand(c, t); label(c, t, "DALL'ALTO", "Pizza nº ${info.pizzaNo}") },
-            clip(p.around[0], false) { c, t -> brand(c, t); label(c, t, "TUTTO INTORNO", null) },
-            clip(p.around[1], false) { c, t -> brand(c, t); label(c, t, "TUTTO INTORNO", null) },
-            clip(p.rim, true) { c, t -> brand(c, t); label(c, t, "IL CORNICIONE", "$clock in forno · croccante") },
+            clip(p.top) { c, t -> brand(c, t); label(c, t, "DALL'ALTO", "Pizza nº ${info.pizzaNo}") },
+            clip(p.around[0]) { c, t -> brand(c, t); label(c, t, "TUTTO INTORNO", null) },
+            clip(p.around[1]) { c, t -> brand(c, t); label(c, t, "TUTTO INTORNO", null) },
+            clip(p.rim) { c, t -> brand(c, t); label(c, t, "IL CORNICIONE", "$clock in forno · croccante") },
             still(prep.stampImage, STAMP_MS) { c, t -> stamp(c, t, info) },
             still(prep.outroImage, OUTRO_MS) { c, t -> outro(c, t, info, face) },
         )
-        val sound = ImmutableList.of(
-            EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(prep.soundtrack))).build(),
-            EditedMediaItem.Builder(MediaItem.fromUri(RawResourceDataSource.buildRawResourceUri(R.raw.voice_pronta))).build(),
-        )
+        // the pictures carry no sound; all of it (crunch, thud, voice) is one WAV the app mixed itself
+        val sound = ImmutableList.of(EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(prep.soundtrack))).build())
         return Composition.Builder(ImmutableList.of(EditedMediaItemSequence(videoItems), EditedMediaItemSequence(sound)))
-            .experimentalSetForceAudioTrack(true)
             .setHdrMode(Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL)
             .build()
     }

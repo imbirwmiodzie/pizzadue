@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import com.vibepizzaiolo.avatar.Cartoonizer
 import com.vibepizzaiolo.avatar.Pizzaiolo
+import com.vibepizzaiolo.video.AudioClip
+import com.vibepizzaiolo.video.Soundtrack
 import com.vibepizzaiolo.video.VideoMaker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -50,5 +52,29 @@ class ReelTest {
         Pizzaiolo.draw(c, 540f, 1600f, 880f, 0.5f, null)
         Pizzaiolo.draw(c, 540f, 1600f, 880f, 1.5f, Bitmap.createBitmap(Cartoonizer.SIZE, Cartoonizer.SIZE, Bitmap.Config.ARGB_8888))
         assertNotNull(frame)
+    }
+
+    @Test fun soundtrackMixesLayersAtTheirTimeAndHasTheReelsLength() {
+        val file = java.io.File.createTempFile("reel", ".wav")
+        val crunch = FloatArray(Soundtrack.RATE / 10) { 0.5f } // 100 ms
+        Soundtrack.write(file, lengthMs = 2_000, stampAtMs = 1_500, layers = listOf(Soundtrack.Layer(200, crunch)))
+        val bytes = file.readBytes()
+        assertEquals(44 + 2 * Soundtrack.RATE * 2, bytes.size) // 2 s of 16-bit mono after the header
+        fun sample(ms: Int): Int {
+            val i = 44 + 2 * (Soundtrack.RATE * ms / 1000)
+            return (bytes[i].toInt() and 0xFF) or (bytes[i + 1].toInt() shl 8)
+        }
+        assertEquals(0, sample(100))
+        assertEquals((0.5f * 32767).toInt(), sample(250))
+        assertEquals(0, sample(400))
+        file.delete()
+    }
+
+    @Test fun resamplingKeepsDurationAndShape() {
+        val src = FloatArray(48_000) { it / 48_000f } // 1 s ramp at 48 kHz
+        val out = AudioClip.resample(src, 48_000, Soundtrack.RATE)
+        assertEquals(Soundtrack.RATE, out.size)
+        assertEquals(0.5f, out[Soundtrack.RATE / 2], 0.001f)
+        assertTrue(AudioClip.resample(src, 48_000, 48_000) === src)
     }
 }
