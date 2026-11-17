@@ -4,3 +4,6 @@
 -keep class org.vosk.** { *; }
 -dontwarn java.awt.**
 -dontwarn com.sun.jna.**
+
+# Keep exception class names readable in error messages and logs.
+-keepnames class * extends java.lang.Throwable

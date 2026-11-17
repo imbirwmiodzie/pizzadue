@@ -12,6 +12,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.media.MediaMetadataRetriever
+import android.util.Log
 import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.Effect
@@ -93,6 +94,24 @@ class VideoMaker(private val context: Context) {
             val a1 = orbit.first + (len - cut) * 25 / 100
             val a2 = orbit.first + (len - cut) * 75 / 100
             return ReelPlan(top, listOf(a1..(a1 + cut), a2..(a2 + cut)), rim)
+        }
+
+        /**
+         * What to show when the reel fails. Release builds are obfuscated, so the exception's class
+         * name is useless ("I"); Media3's error code and the root cause's message survive and say
+         * what actually went wrong.
+         */
+        fun explain(e: Throwable): String {
+            if (e is IllegalArgumentException && e.message != null) return e.message!!
+            val code = (e as? ExportException)?.errorCodeName ?: e.javaClass.name
+            val hint = when ((e as? ExportException)?.errorCode ?: 0) {
+                in 2000..2999 -> "The recording could not be opened. Try recording again."
+                in 3000..5999 -> "This phone could not convert the video. In the camera settings choose 1080p at 30 fps with HDR off, then record again."
+                else -> "Try recording again."
+            }
+            val root = generateSequence(e) { it.cause }.last()
+            val detail = root.message?.take(160)?.let { ": $it" } ?: ""
+            return "Could not make the reel. $hint\n($code$detail)"
         }
     }
 
@@ -228,6 +247,7 @@ class VideoMaker(private val context: Context) {
                         }
 
                         override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
+                            Log.e("VideoMaker", "Reel export failed: ${exportException.errorCodeName}", exportException)
                             if (cont.isActive) cont.resumeWithException(exportException)
                         }
                     })

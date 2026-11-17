@@ -1,0 +1,100 @@
+/* "Oven at night", the same colours as the app and the pizza-night page. */
+:root {
+  --bg: #1A1E23; --card: #242A31; --raised: #353D47; --line: #333A43;
+  --fg: #F3EFE6; --muted: #9AA3AD; --flame: #FFB020; --ember: #FF8A3D;
+  --basil: #5FCF8A; --tomato: #FF6B57; --ink: #1A1E23;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; }
+.loading { margin: 40vh auto 0; text-align: center; font-size: 44px; }
+
+/* ---- text pages: start, finished reel, problems ---- */
+.page {
+  max-width: 520px; margin: 0 auto; min-height: 100dvh;
+  padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 18px;
+}
+.brand { color: var(--muted); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+h1 { margin: 4px 0 0; font-size: 30px; line-height: 1.12; letter-spacing: -.01em; text-wrap: balance; }
+.lead { margin: 8px 0 0; color: var(--muted); }
+.steps { list-style: none; margin: 0; padding: 0; background: var(--card); border-radius: 16px; overflow: hidden; }
+.steps li { display: flex; gap: 14px; align-items: center; padding: 14px; }
+.steps li + li { border-top: 1px solid var(--line); }
+.steps .n {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--raised); color: var(--flame); font-weight: 700;
+}
+.steps .name { font-weight: 700; }
+.steps .sub { color: var(--muted); font-size: 14px; }
+.steps .secs { margin-left: auto; white-space: nowrap; color: var(--flame); font-variant-numeric: tabular-nums; font-weight: 600; }
+.fine { color: var(--muted); font-size: 13px; margin: 0; }
+.error { color: var(--tomato); margin: 0; }
+
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  min-height: 56px; padding: 0 20px; border: 0; border-radius: 16px; cursor: pointer;
+  background: var(--flame); color: var(--ink); font-weight: 700; font-size: 18px; text-decoration: none;
+}
+.btn.ghost { background: var(--raised); color: var(--fg); }
+.btn:active { transform: scale(.98); }
+.actions { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+
+.result {
+  display: block; width: 100%; max-height: 62dvh; aspect-ratio: 9 / 16; object-fit: contain;
+  background: #000; border-radius: 16px;
+}
+
+/* ---- the camera: a 9:16 frame, exactly what goes into the reel ---- */
+.stage-wrap { position: fixed; inset: 0; background: #000; display: grid; place-items: center; overflow: hidden; }
+.stage {
+  position: relative; width: min(100vw, calc(100dvh * 9 / 16)); aspect-ratio: 9 / 16; overflow: hidden; background: #000;
+}
+.stage video, .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.stage canvas { visibility: hidden; }
+.stage.rendering canvas { visibility: visible; }
+.stage.rendering video, .stage.rendering .close { visibility: hidden; }
+
+.guide {
+  position: absolute; left: 12px; right: 12px; top: calc(12px + env(safe-area-inset-top));
+  padding: 12px 14px; border-radius: 16px; background: rgba(26, 30, 35, .78);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.guide .title { font-weight: 800; letter-spacing: .06em; color: var(--flame); display: flex; align-items: center; gap: 8px; }
+.guide .title .left { margin-left: auto; color: var(--fg); font-variant-numeric: tabular-nums; }
+.guide .say { margin-top: 2px; font-size: 15px; }
+.bars { display: flex; gap: 6px; margin-top: 10px; }
+.bars span { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .22); overflow: hidden; }
+.bars i { display: block; height: 100%; width: 0; background: var(--flame); }
+.rec { width: 10px; height: 10px; border-radius: 50%; background: var(--tomato); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+
+.count {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  font-size: 160px; font-weight: 800; color: #fff; text-shadow: 0 4px 24px rgba(0, 0, 0, .6);
+}
+.bottom {
+  position: absolute; left: 0; right: 0; bottom: calc(20px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; justify-content: center;
+}
+.shutter {
+  width: 84px; height: 84px; border-radius: 50%; border: 5px solid #fff; background: var(--tomato);
+  cursor: pointer; box-shadow: 0 4px 18px rgba(0, 0, 0, .5);
+}
+.shutter:active { transform: scale(.94); }
+.close {
+  position: absolute; right: 16px; bottom: calc(40px + env(safe-area-inset-bottom));
+  width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(26, 30, 35, .7); color: #fff; font-size: 22px;
+}
+.making {
+  position: absolute; left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom));
+  padding: 12px 14px; border-radius: 16px; background: rgba(26, 30, 35, .82); text-align: center; font-weight: 600;
+}
+@media (prefers-reduced-motion: reduce) { .rec { animation: none; } }
