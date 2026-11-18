@@ -236,7 +236,10 @@ object CardRenderer {
         text(c, "PIZZA Nº ${info.pizzaNo}", l, t.top + 74f, mono(30f, true, 0.08f), PAPER_MUTED)
         textRight(c, date(info.whenMs).uppercase(Locale.getDefault()), r, t.top + 74f, mono(30f, true, 0.04f), PAPER_MUTED)
         text(c, clock(info.bakeMs), l - 6f, t.top + 250f, mono(170f, true, -0.03f), INK)
-        textRight(c, "say “vai!”", r, t.top + 210f, mono(32f, false), PAPER_MUTED)
+        // the start phrase, stacked so it stays clear of the big clock
+        textRight(c, "say “pizza", r, t.top + 142f, mono(32f, false), PAPER_MUTED)
+        textRight(c, "napoli", r, t.top + 180f, mono(32f, false), PAPER_MUTED)
+        textRight(c, "presto!”", r, t.top + 218f, mono(32f, false), PAPER_MUTED)
         text(c, "oven ${info.preheatMin} min · ${info.balls} × ${info.ballWeight} g", l, t.top + 308f, mono(30f, false), PAPER_TEXT)
         text(c, "${pct(info.hydration)} water · ${pct(info.salt)} salt · ${pct(info.yeast)} yeast", l, t.top + 350f, mono(30f, false), PAPER_TEXT)
         c.drawLine(l, t.top + 382f, r, t.top + 382f, Paint(Paint.ANTI_ALIAS_FLAG).apply {

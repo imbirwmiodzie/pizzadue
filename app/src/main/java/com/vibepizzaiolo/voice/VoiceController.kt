@@ -125,14 +125,21 @@ class VoiceController(
         val obj = runCatching { JSONObject(json) }.getOrNull() ?: return
         val text = obj.optString("text").trim()
         if (text.isEmpty() || text == "[unk]") return
-        // average word confidence: drop guesses forced out of random kitchen noise
+        val cmd = Grammar.parse(text, lang) ?: return
+        // word confidence: drop guesses forced out of random kitchen noise or the radio.
+        // Starting by mistake is worse than stopping, so every word of a start must be clear.
         val words = obj.optJSONArray("result")
         if (words != null && words.length() > 0) {
             var sum = 0.0
-            for (i in 0 until words.length()) sum += words.getJSONObject(i).optDouble("conf", 1.0)
+            var min = 1.0
+            for (i in 0 until words.length()) {
+                val conf = words.getJSONObject(i).optDouble("conf", 1.0)
+                sum += conf
+                min = minOf(min, conf)
+            }
             if (sum / words.length() < MIN_CONFIDENCE) return
+            if (cmd == Command.START && min < MIN_START_WORD_CONFIDENCE) return
         }
-        val cmd = Grammar.parse(text, lang) ?: return
         val now = SystemClock.elapsedRealtime()
         // both recognisers may hear the same words; act once
         if (cmd == lastCommand && now - lastCommandAt < 2000) return
@@ -157,5 +164,6 @@ class VoiceController(
         const val TAG = "VibePizzaioloVoice"
         const val SAMPLE_RATE = 16_000
         const val MIN_CONFIDENCE = 0.6
+        const val MIN_START_WORD_CONFIDENCE = 0.75
     }
 }

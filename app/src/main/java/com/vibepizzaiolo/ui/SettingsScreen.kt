@@ -123,9 +123,9 @@ fun SettingsScreen(
 
         SectionLabel("Voice commands")
         Group {
-            SwitchRow("English", "start: vai! · waj! · pizza in · start   stop: pizza out · stop", s.voiceEn, { v -> update { it.copy(voiceEn = v) } })
+            SwitchRow("English", "start: pizza napoli presto   stop: pizza basta", s.voiceEn, { v -> update { it.copy(voiceEn = v) } })
             GroupDivider()
-            SwitchRow("Polski", "start: start   stop: wyjmij · stop · koniec", s.voicePl, { v -> update { it.copy(voicePl = v) } })
+            SwitchRow("Polski", "start: pizza napoli presto   stop: pizza basta", s.voicePl, { v -> update { it.copy(voicePl = v) } })
         }
         val status = when (voice) {
             is VoiceStatus.Listening -> "Listening, offline."

@@ -2,7 +2,7 @@
 
 A voice‑driven pizza timer for Android. Four tabs:
 
-- **Timer**: preheat the oven (30 min), then bake (1:30). Say **“vai!”** / **“waj!”** to start, **“pizza out”** / **“wyjmij”** to stop.
+- **Timer**: preheat the oven (30 min), then bake (1:30). Say **“pizza napoli presto”** to start, **“pizza basta”** to stop.
 - **Dough**: dough balls (±1) and ball weight (±10 g) → grams of flour, water, salt and yeast. Hold − / + to step fast.
 - **Pizzaioli**: swipe, search and comment other people's pizzas, post yours, and ask a pizzaiolo to eat together (see below).
 - **Serata**: a pizza night with friends: they order through one link in the browser, the app counts the dough and
@@ -81,7 +81,7 @@ through a link, without installing anything:
    with flour, water, salt and yeast from your Dough settings); one tap sets the Dough tab to that number of balls.
 3. **The bake**: *Close orders · start the bake*. Friends' phones now show only “The bake is on. Put your phone away.”
    Your phone shows the queue: the test pizza first, then one pizza each before anybody gets a second. The Timer tab
-   says whose pizza is next, and every finished bake (“pizza out”) ticks the next one by itself; taps on the queue
+   says whose pizza is next, and every finished bake (“pizza basta”) ticks the next one by itself; taps on the queue
    correct it.
 4. **After**: *Finish the night*; the link then says grazie.
 
@@ -90,11 +90,11 @@ The guests' page speaks Polish or English, whichever the phone is set to. This t
 
 ## How it sounds
 
-A long beep marks every start. Bake (counted from “vai!”): 1 short tick at :15, 2 at :30, 3 at :45, one long tick on every full minute.
-“Gira, gira!” at half time. At the end “La pizza è pronta!” repeats every 10 s until you say “pizza out” / “wyjmij”.
+A long beep marks every start. Bake (counted from “pizza napoli presto”): 1 short tick at :15, 2 at :30, 3 at :45, one long tick on every full minute.
+“Gira, gira!” at half time. At the end “La pizza è pronta!” repeats every 10 s until you say “pizza basta”.
 
 Preheat: silent except 1 tick at ⅓, 2 ticks at ⅔, 3 ticks at the end, then “Forno a legna caldo” every 30 s
-until you say “vai!” or stop it. The timer then switches to Bake.
+until you say “pizza napoli presto” or stop it. The timer then switches to Bake.
 
 Loudness: by default everything plays as an alarm sound, so it is heard even when the phone is on silent and always
 comes from the phone's speaker; **Play as alarm** off switches to media sound (media volume, Bluetooth/headphones). **Beep volume**
@@ -108,13 +108,15 @@ while the app is open, and vibration and a flashlight blink per tick can be turn
 Voice only starts and stops the timer. Offline (Vosk), English and Polish listening at the same time,
 only while the app is open. There are no spoken replies: a long beep confirms the start.
 
-| Action | English | Polski |
-|---|---|---|
-| Start the timer (preheat or bake, whichever is selected) | vai!, waj!*, pizza in, start | start |
-| Stop the timer or the end call | pizza out, stop | wyjmij, stop, koniec |
+| Action | Phrase (same in English and Polish) |
+|---|---|
+| Start the timer (preheat or bake, whichever is selected) | pizza napoli presto |
+| Stop the timer or the end call | pizza basta |
 
-\* “vai” and “waj” are not words in either speech model. The English model hears them as “vie”, which sounds the same,
-so the English list needs to be on for “vai!” to work.
+Every word is in both speech models and sounds almost the same in either language, so the phrases work with
+either list switched on. To keep a radio or TV from setting the timer off, a phrase only counts when it is all
+that is heard in one breath (said inside a longer sentence it is ignored), and every word of the start phrase
+must be recognised clearly.
 
 ## Build locally
 
