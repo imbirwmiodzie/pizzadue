@@ -35,8 +35,8 @@ sealed interface VoiceStatus {
 }
 
 /**
- * Listens continuously while the app is open. One microphone stream feeds an English
- * and a Polish recogniser at once; each only knows the phrases in [Grammar].
+ * Listens continuously while the app is open. The microphone stream feeds the Italian
+ * recogniser, which only knows the phrases and decoys in [Grammar].
  */
 class VoiceController(
     private val context: Context,
@@ -62,7 +62,7 @@ class VoiceController(
                 if (Models.loaded.keys.containsAll(langs).not()) _status.value = VoiceStatus.Preparing
                 val recognizers = langs.mapNotNull { lang ->
                     val model = Models.get(context, lang) ?: return@mapNotNull null
-                    lang to Recognizer(model, SAMPLE_RATE.toFloat(), Grammar.recognizerGrammar(lang)).apply { setWords(true) }
+                    lang to Recognizer(model, SAMPLE_RATE.toFloat(), Grammar.recognizerGrammar()).apply { setWords(true) }
                 }
                 if (recognizers.isEmpty()) {
                     _status.value = VoiceStatus.Error("Speech models are missing from this build")
@@ -125,7 +125,7 @@ class VoiceController(
         val obj = runCatching { JSONObject(json) }.getOrNull() ?: return
         val text = obj.optString("text").trim()
         if (text.isEmpty() || text == "[unk]") return
-        val cmd = Grammar.parse(text, lang) ?: return
+        val cmd = Grammar.parse(text) ?: return
         // word confidence: drop guesses forced out of random kitchen noise or the radio.
         // Starting by mistake is worse than stopping, so every word of a start must be clear.
         val words = obj.optJSONArray("result")

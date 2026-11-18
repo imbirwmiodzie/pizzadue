@@ -31,8 +31,8 @@ data class Settings(
     val asAlarm: Boolean = true,
     val vibrate: Boolean = false,
     val flash: Boolean = false,
-    val voiceEn: Boolean = true,
-    val voicePl: Boolean = true,
+    /** Voice commands on: "pizza napoli presto" / "pizza basta". */
+    val voice: Boolean = true,
     val balls: Int = 4,
     val ballWeight: Int = 250,
 ) {
@@ -70,8 +70,7 @@ class SettingsRepository(context: Context) {
         val asAlarm = booleanPreferencesKey("as_alarm")
         val vibrate = booleanPreferencesKey("vibrate_v2")
         val flash = booleanPreferencesKey("flash")
-        val voiceEn = booleanPreferencesKey("voice_en")
-        val voicePl = booleanPreferencesKey("voice_pl")
+        val voice = booleanPreferencesKey("voice_on")
         val balls = intPreferencesKey("balls")
         val ballWeight = intPreferencesKey("ball_weight")
         val bakeCount = intPreferencesKey("bake_count")
@@ -110,8 +109,7 @@ class SettingsRepository(context: Context) {
             asAlarm = p[K.asAlarm] ?: d.asAlarm,
             vibrate = p[K.vibrate] ?: d.vibrate,
             flash = p[K.flash] ?: d.flash,
-            voiceEn = p[K.voiceEn] ?: d.voiceEn,
-            voicePl = p[K.voicePl] ?: d.voicePl,
+            voice = p[K.voice] ?: d.voice,
             balls = p[K.balls] ?: d.balls,
             ballWeight = p[K.ballWeight] ?: d.ballWeight,
         )
@@ -125,7 +123,7 @@ class SettingsRepository(context: Context) {
                 p[K.bakeSec] ?: d.bakeSec, p[K.preheatSec] ?: d.preheatSec,
                 p[K.ticks] ?: d.ticks, p[K.pronta] ?: d.pronta, p[K.forno] ?: d.forno, p[K.gira] ?: d.gira,
                 p[K.bright] ?: d.bright, p[K.volume] ?: d.volume, p[K.night] ?: d.night, p[K.asAlarm] ?: d.asAlarm, p[K.vibrate] ?: d.vibrate, p[K.flash] ?: d.flash,
-                p[K.voiceEn] ?: d.voiceEn, p[K.voicePl] ?: d.voicePl,
+                p[K.voice] ?: d.voice,
                 p[K.balls] ?: d.balls, p[K.ballWeight] ?: d.ballWeight,
             )
             val s = transform(cur)
@@ -144,8 +142,7 @@ class SettingsRepository(context: Context) {
             p[K.asAlarm] = s.asAlarm
             p[K.vibrate] = s.vibrate
             p[K.flash] = s.flash
-            p[K.voiceEn] = s.voiceEn
-            p[K.voicePl] = s.voicePl
+            p[K.voice] = s.voice
             p[K.balls] = s.balls.coerceIn(1, 99)
             p[K.ballWeight] = s.ballWeight.coerceIn(50, 2000)
         }

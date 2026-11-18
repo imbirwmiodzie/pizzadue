@@ -102,15 +102,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { _avatar.value = withContext(Dispatchers.IO) { AvatarStore.load(getApplication()) } }
         // the sound player follows Settings even when no timer runs (previews in Settings)
         viewModelScope.launch { settings.collect { player.configure(it) } }
-        // restart listening when the language switches change
+        // restart listening when the voice switch changes
         viewModelScope.launch {
             settings.map { langs(it) }.distinctUntilChanged().collect { if (foreground) voice.start(it) }
         }
     }
 
     private fun langs(s: Settings) = buildSet {
-        if (s.voiceEn) add(Lang.EN)
-        if (s.voicePl) add(Lang.PL)
+        if (s.voice) add(Lang.IT)
     }
 
     private fun durationFor(mode: Mode, s: Settings = settings.value) =

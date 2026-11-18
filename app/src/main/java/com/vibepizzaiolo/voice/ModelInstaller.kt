@@ -15,6 +15,9 @@ object ModelInstaller {
         val assetDir = "models/$name"
         val wanted = runCatching { assets.open("$assetDir/version.txt").bufferedReader().use { it.readText().trim() } }
             .getOrNull() ?: return null
+        // models of languages the app no longer has (English and Polish before) take up ~160 MB
+        val keep = Lang.entries.map { it.name.lowercase() }.toSet()
+        File(context.filesDir, "models").listFiles()?.filter { it.name !in keep }?.forEach { it.deleteRecursively() }
         val target = File(context.filesDir, "models/$name")
         val marker = File(target, "version.txt")
         if (marker.exists() && marker.readText().trim() == wanted) return target

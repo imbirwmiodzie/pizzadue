@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Downloads the offline speech models (English + Polish) into the app's assets.
-# They are not committed to git (about 160 MB unpacked); CI runs this before every build.
+# Downloads the offline Italian speech model into the app's assets (the voice commands are Italian).
+# It is not committed to git (about 90 MB unpacked); CI runs this before every build.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 CACHE=.cache/models
@@ -17,5 +17,6 @@ fetch() { # $1 = model name, $2 = asset folder
   echo "$1" > "$ASSETS/$2/version.txt"
   echo "model $1 -> $ASSETS/$2 ($(du -sh "$ASSETS/$2" | cut -f1))"
 }
-fetch vosk-model-small-en-us-0.15 en
-fetch vosk-model-small-pl-0.22 pl
+# the English and Polish models of earlier versions are no longer used
+rm -rf "$ASSETS/en" "$ASSETS/pl"
+fetch vosk-model-small-it-0.22 it

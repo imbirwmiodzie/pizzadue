@@ -1,6 +1,7 @@
 package com.vibepizzaiolo.voice
 
-enum class Lang { EN, PL }
+/** Speech models in the app. Only the Italian one: the commands are Italian. */
+enum class Lang { IT }
 
 enum class AppTab { TIMER, DOUGH, PARTY, COMMUNITY, SETTINGS }
 

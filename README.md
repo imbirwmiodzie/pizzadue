@@ -105,23 +105,27 @@ while the app is open, and vibration and a flashlight blink per tick can be turn
 
 ## Voice commands
 
-Voice only starts and stops the timer. Offline (Vosk), English and Polish listening at the same time,
-only while the app is open. There are no spoken replies: a long beep confirms the start.
+Voice only starts and stops the timer. Offline (Vosk, Italian speech model), only while the app is open. There are no spoken replies: a long beep confirms the start.
 
-| Action | Phrase (same in English and Polish) |
+| Action | Phrase |
 |---|---|
 | Start the timer (preheat or bake, whichever is selected) | pizza napoli presto |
 | Stop the timer or the end call | pizza basta |
 
-Every word is in both speech models and sounds almost the same in either language, so the phrases work with
-either list switched on. To keep a radio or TV from setting the timer off, a phrase only counts when it is all
-that is heard in one breath (said inside a longer sentence it is ignored), and every word of the start phrase
-must be recognised clearly.
+The phrases are Italian, so the app listens with the Italian model, which recognises them whatever your accent.
+To keep a radio or TV from setting the timer off:
+
+- a phrase only counts when it is all that is heard in one breath (inside a longer sentence it is ignored);
+- the recogniser also knows ~80 ordinary "decoy" words (pasta, pronta, piazza…), so other speech lands on those
+  instead of being forced onto a command.
+
+Tested with synthesized Italian, Polish and English voices: all commands recognised, and no false command in
+Polish and English radio news, chat, an ad and an Italian song that all contain “pizza”, “Napoli”, “presto”, “basta”.
 
 ## Build locally
 
 ```bash
-scripts/fetch_models.sh      # speech models into app/src/main/assets (not in git, ~160 MB)
+scripts/fetch_models.sh      # speech models into app/src/main/assets (not in git, ~90 MB)
 scripts/convert_voice.sh     # voice/ recordings -> app/src/main/res/raw (needs ffmpeg)
 ./gradlew testDebugUnitTest assembleDebug
 ./gradlew -p server test      # the community server

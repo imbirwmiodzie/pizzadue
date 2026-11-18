@@ -34,7 +34,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .cache/models
-          key: vosk-models-en-us-0.15-pl-0.22
+          key: vosk-models-it-0.22
 
       - name: Download speech models into the APK assets
         run: scripts/fetch_models.sh

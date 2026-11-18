@@ -123,13 +123,11 @@ fun SettingsScreen(
 
         SectionLabel("Voice commands")
         Group {
-            SwitchRow("English", "start: pizza napoli presto   stop: pizza basta", s.voiceEn, { v -> update { it.copy(voiceEn = v) } })
-            GroupDivider()
-            SwitchRow("Polski", "start: pizza napoli presto   stop: pizza basta", s.voicePl, { v -> update { it.copy(voicePl = v) } })
+            SwitchRow("Listen", "start: pizza napoli presto   stop: pizza basta", s.voice, { v -> update { it.copy(voice = v) } })
         }
         val status = when (voice) {
             is VoiceStatus.Listening -> "Listening, offline."
-            VoiceStatus.Preparing -> "Preparing the speech models (first start only)…"
+            VoiceStatus.Preparing -> "Preparing the speech model (first start only)…"
             VoiceStatus.NoPermission -> "Microphone permission is off. Allow it in Android settings → Apps → VibePizzaiolo."
             is VoiceStatus.Error -> voice.message
             VoiceStatus.Off -> "Voice is off."

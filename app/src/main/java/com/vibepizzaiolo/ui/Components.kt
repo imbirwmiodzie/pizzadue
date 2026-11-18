@@ -29,7 +29,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vibepizzaiolo.voice.Lang
 import com.vibepizzaiolo.voice.VoiceStatus
 
 @Composable
@@ -44,7 +43,7 @@ fun ScreenHeader(title: String, voice: VoiceStatus?, action: (@Composable () -> 
 @Composable
 fun VoiceChip(voice: VoiceStatus) {
     val (label, color) = when (voice) {
-        is VoiceStatus.Listening -> voice.langs.sorted().joinToString(" · ") { if (it == Lang.EN) "EN" else "PL" } to Pal.basil
+        is VoiceStatus.Listening -> "listening" to Pal.basil
         VoiceStatus.Preparing -> "preparing voice…" to Pal.flame
         VoiceStatus.NoPermission -> "mic off" to Pal.tomato
         is VoiceStatus.Error -> "voice error" to Pal.tomato
