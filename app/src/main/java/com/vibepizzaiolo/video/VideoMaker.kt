@@ -121,6 +121,24 @@ class VideoMaker(private val context: Context) {
 
     private val dir = File(context.cacheDir, "videos").apply { mkdirs() }
 
+    /**
+     * A still picture shown for [ms]. Media3 1.4 takes an image's length from the EditedMediaItem
+     * (setDurationUs), not from MediaItem.setImageDurationMs; without it the image loader fails a
+     * bare check and the whole reel fails with ERROR_CODE_UNSPECIFIED.
+     */
+    internal fun stillItem(uri: Uri, ms: Long, effects: Effects = Effects.EMPTY): EditedMediaItem {
+        val item = MediaItem.Builder()
+            .setUri(uri)
+            .setMimeType(MimeTypes.IMAGE_PNG)
+            .setImageDurationMs(ms)
+            .build()
+        return EditedMediaItem.Builder(item)
+            .setDurationUs(ms * 1000)
+            .setFrameRate(30)
+            .setEffects(effects)
+            .build()
+    }
+
     /** Makes the reel; [onProgress] gets 0–100. Returns the finished MP4. */
     suspend fun make(video: Uri, info: CardInfo, face: Bitmap?, onProgress: (Int) -> Unit): File {
         val prep = withContext(Dispatchers.IO) { prepare(video, info) }
@@ -204,17 +222,8 @@ class VideoMaker(private val context: Context) {
                 .build()
         }
 
-        fun still(file: File, ms: Long, draw: (Canvas, Float) -> Unit): EditedMediaItem {
-            val item = MediaItem.Builder()
-                .setUri(Uri.fromFile(file))
-                .setMimeType(MimeTypes.IMAGE_PNG)
-                .setImageDurationMs(ms)
-                .build()
-            return EditedMediaItem.Builder(item)
-                .setFrameRate(30)
-                .setEffects(Effects(ImmutableList.of(), ImmutableList.of<Effect>(presentation, OverlayEffect(ImmutableList.of(FrameOverlay(pool, draw))))))
-                .build()
-        }
+        fun still(file: File, ms: Long, draw: (Canvas, Float) -> Unit): EditedMediaItem =
+            stillItem(Uri.fromFile(file), ms, Effects(ImmutableList.of(), ImmutableList.of<Effect>(presentation, OverlayEffect(ImmutableList.of(FrameOverlay(pool, draw))))))
 
         val p = prep.plan
         val clock = CardRenderer.clock(info.bakeMs)

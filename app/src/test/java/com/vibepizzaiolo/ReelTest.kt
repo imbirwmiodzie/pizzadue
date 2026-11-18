@@ -77,4 +77,12 @@ class ReelTest {
         assertEquals(0.5f, out[Soundtrack.RATE / 2], 0.001f)
         assertTrue(AudioClip.resample(src, 48_000, 48_000) === src)
     }
+
+    @Test fun stillPicturesCarryTheLengthAndFrameRateMedia3Needs() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val item = VideoMaker(context).stillItem(android.net.Uri.parse("file:///stamp.png"), VideoMaker.STAMP_MS)
+        // Media3 1.4's image loader refuses items without these (it failed the reel on a phone)
+        assertEquals(VideoMaker.STAMP_MS * 1000, item.durationUs)
+        assertEquals(30, item.frameRate)
+    }
 }
