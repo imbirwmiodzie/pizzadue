@@ -27,7 +27,8 @@ import com.vibepizzaiolo.share.Design
 import com.vibepizzaiolo.share.Format
 import com.vibepizzaiolo.share.ShareUtils
 import com.vibepizzaiolo.avatar.AvatarStore
-import com.vibepizzaiolo.avatar.Cartoonizer
+import com.vibepizzaiolo.avatar.FaceSketch
+import com.vibepizzaiolo.avatar.Pizzaiolo
 import com.vibepizzaiolo.video.VideoMaker
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -85,9 +86,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _video = MutableStateFlow<VideoUi?>(null)
     val video: StateFlow<VideoUi?> = _video.asStateFlow()
 
-    /** Your cartoon portrait: your icon, and your face on the pizzaiolo at the end of the reel. */
+    /** Your face drawn in pen and ink: on the pizzaiolo at the end of the reel. */
     private val _avatar = MutableStateFlow<Bitmap?>(null)
     val avatar: StateFlow<Bitmap?> = _avatar.asStateFlow()
+
+    /** Your icon: your head in the toque, cut from the drawing. */
+    val avatarIcon: StateFlow<Bitmap?> = _avatar
+        .map { face -> face?.let { withContext(Dispatchers.Default) { Pizzaiolo.icon(it, 256) } } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val _avatarBusy = MutableStateFlow(false)
     val avatarBusy: StateFlow<Boolean> = _avatarBusy.asStateFlow()
 
@@ -225,17 +231,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ---- your cartoon portrait ----
+    // ---- your face on the pizzaiolo ----
     fun makeAvatar(photo: Uri) {
         _avatarBusy.value = true
         viewModelScope.launch {
             val app = getApplication<Application>()
-            val cartoon = withContext(Dispatchers.Default) {
-                ShareUtils.loadPhoto(app, photo, maxSide = 1400)?.let { Cartoonizer.cartoon(it) }
+            val drawn = withContext(Dispatchers.Default) {
+                ShareUtils.loadPhoto(app, photo, maxSide = 1400)?.let { selfie ->
+                    val crop = FaceSketch.cropFace(selfie)
+                    crop to FaceSketch.draw(crop)
+                }
             }
-            if (cartoon != null) {
-                withContext(Dispatchers.IO) { AvatarStore.save(app, cartoon) }
-                _avatar.value = cartoon
+            if (drawn != null) {
+                withContext(Dispatchers.IO) { AvatarStore.save(app, drawn.first, drawn.second) }
+                _avatar.value = drawn.second
             }
             _avatarBusy.value = false
         }

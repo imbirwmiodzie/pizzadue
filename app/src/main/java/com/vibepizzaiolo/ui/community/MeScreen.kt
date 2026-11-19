@@ -65,7 +65,7 @@ fun MeScreen(ui: CommunityUi, avatar: Bitmap?, a: MeActions) {
             }
             Column {
                 Text(me.name, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                if (avatar == null) Text("Take a selfie in Settings to get a cartoon face here.", color = Pal.muted, fontSize = 12.sp)
+                if (avatar == null) Text("Take a selfie in Settings to see yourself as the pizzaiolo here.", color = Pal.muted, fontSize = 12.sp)
             }
         }
         me.card?.let { card ->

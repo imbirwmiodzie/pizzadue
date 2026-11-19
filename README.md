@@ -36,7 +36,7 @@ Facebook do not accept text from other apps, so paste it); WhatsApp and most oth
 **Video reel**: the camera icon → *Video reel*. An animation shows how to film (from above, once around low, the rim
 with a finger press), then the phone's camera records up to 20 s. The app edits it by itself into a vertical
 1080×1920 reel: from above → two quick cuts around → the rim with its real crunch → the **QUALITÀ SUPERIORE** seal
-falling onto the pizza with a thud → the ending with the cartoon pizzaiolo waving and *“La pizza è pronta!”*.
+falling onto the pizza with a thud → the ending with the pen-and-ink pizzaiolo waving and *“La pizza è pronta!”*.
 Made on the phone with Media3 Transformer; shared like the cards (Instagram, Facebook, WhatsApp, more, save).
 
 **In the browser, nothing to install**: the server (see [server/README.md](server/README.md)) also serves the reel as a
@@ -46,9 +46,10 @@ adds the seal and the ending with the pizzaiolo and the voice. It films at 1080p
 app is set to, works in Chrome and Safari (MP4; other browsers save WebM), and makes the reel on the phone: nothing is
 uploaded. Add `?n=12&bake=92` to the link to print the pizza number and the bake time (seconds).
 
-**You as the pizzaiolo**: Settings → *You, the pizzaiolo* → Selfie. The app finds your face, draws it as a cartoon
-(flat colours and ink outlines), shows it as your icon on the Timer and puts it on the pizzaiolo at the end of every
-reel. Everything stays on the phone.
+**You as the pizzaiolo**: Settings → *You, the pizzaiolo* → Selfie. The app finds your eyes, draws your face in pen
+and ink (ink lines, hatched shadows, skin and hair in flat washes), cuts it to the shape of your head with your hair and
+puts it on the drawn pizzaiolo, under the toque: your icon on the Timer and in the community, and the chef at the end of
+every reel. A plain wall behind you works best. Everything stays on the phone.
 
 ## Pizzaioli: the community
 

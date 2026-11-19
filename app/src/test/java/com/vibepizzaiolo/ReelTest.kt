@@ -2,7 +2,7 @@ package com.vibepizzaiolo
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import com.vibepizzaiolo.avatar.Cartoonizer
+import com.vibepizzaiolo.avatar.FaceSketch
 import com.vibepizzaiolo.avatar.Pizzaiolo
 import com.vibepizzaiolo.video.AudioClip
 import com.vibepizzaiolo.video.Soundtrack
@@ -39,18 +39,27 @@ class ReelTest {
         assertNull(VideoMaker.plan(3_000))
     }
 
-    @Test fun selfieBecomesASquareCartoon() {
-        val selfie = Bitmap.createBitmap(1200, 1600, Bitmap.Config.ARGB_8888)
-        val cartoon = Cartoonizer.cartoon(selfie)
-        assertEquals(Cartoonizer.SIZE, cartoon.width)
-        assertEquals(Cartoonizer.SIZE, cartoon.height)
+    @Test fun selfieBecomesAFaceCutToTheHead() {
+        val selfie = Bitmap.createBitmap(1200, 1600, Bitmap.Config.ARGB_8888).apply { eraseColor(0xFF8899AA.toInt()) }
+        val face = FaceSketch.sketch(selfie)
+        assertEquals(FaceSketch.SIZE, face.width)
+        assertEquals(FaceSketch.SIZE, face.height)
+        // inside the head it is drawn, in the corners it is see-through
+        assertEquals(255, face.getPixel(FaceSketch.HEAD_CX.toInt(), FaceSketch.HEAD_CY.toInt()) ushr 24)
+        assertEquals(0, face.getPixel(2, FaceSketch.SIZE - 3) ushr 24)
+    }
+
+    @Test fun iconIsTheHeadInTheToque() {
+        val icon = Pizzaiolo.icon(Bitmap.createBitmap(FaceSketch.SIZE, FaceSketch.SIZE, Bitmap.Config.ARGB_8888), 128)
+        assertEquals(128, icon.width)
+        assertEquals(128, icon.height)
     }
 
     @Test fun pizzaioloDrawsWithAndWithoutAFace() {
         val frame = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888)
         val c = Canvas(frame)
         Pizzaiolo.draw(c, 540f, 1600f, 880f, 0.5f, null)
-        Pizzaiolo.draw(c, 540f, 1600f, 880f, 1.5f, Bitmap.createBitmap(Cartoonizer.SIZE, Cartoonizer.SIZE, Bitmap.Config.ARGB_8888))
+        Pizzaiolo.draw(c, 540f, 1600f, 880f, 1.5f, Bitmap.createBitmap(FaceSketch.SIZE, FaceSketch.SIZE, Bitmap.Config.ARGB_8888))
         assertNotNull(frame)
     }
 

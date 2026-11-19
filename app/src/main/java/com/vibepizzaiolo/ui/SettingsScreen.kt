@@ -138,7 +138,7 @@ fun SettingsScreen(
     }
 }
 
-/** Your cartoon portrait and what you can do with it. */
+/** You as the pizzaiolo, and what you can do with it. */
 class AvatarActions(
     val picture: Bitmap?,
     val busy: Boolean,
@@ -153,13 +153,13 @@ private fun AvatarRow(a: AvatarActions) {
         Box(Modifier.size(84.dp).clip(CircleShape).background(Pal.raised), contentAlignment = Alignment.Center) {
             when {
                 a.busy -> CircularProgressIndicator(color = Pal.flame, modifier = Modifier.size(32.dp))
-                a.picture != null -> Image(a.picture.asImageBitmap(), "Your cartoon portrait", Modifier.size(84.dp))
+                a.picture != null -> Image(a.picture.asImageBitmap(), "You as the pizzaiolo", Modifier.size(84.dp))
                 else -> Icon(Icons.Default.Face, null, tint = Pal.muted, modifier = Modifier.size(44.dp))
             }
         }
         Column(Modifier.padding(start = 14.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                if (a.picture == null) "Take a selfie: the app draws you as a cartoon. You become the pizzaiolo at the end of your reels."
+                if (a.picture == null) "Take a selfie: the app draws your face in pen and ink. You become the pizzaiolo at the end of your reels."
                 else "This is you as the pizzaiolo: your icon and the chef at the end of your reels.",
                 fontSize = 13.sp, color = Pal.muted,
             )

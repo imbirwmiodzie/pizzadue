@@ -53,8 +53,8 @@ data class ReelPlan(val top: LongRange, val around: List<LongRange>, val rim: Lo
 
 /**
  * Cuts the guided recording into a vertical reel: from above, around (two quick cuts), the rim
- * with its real crunch, the quality seal stamped on, and an ending with the cartoon pizzaiolo
- * (the user's own cartoon face if there is one) and "La pizza è pronta!".
+ * with its real crunch, the quality seal stamped on, and an ending with the pen-and-ink pizzaiolo
+ * (with the user's own face if there is one) and "La pizza è pronta!".
  * Built on the phone with Media3 Transformer.
  */
 @OptIn(markerClass = [UnstableApi::class])
@@ -350,7 +350,7 @@ class VideoMaker(private val context: Context) {
         }
     }
 
-    /** The ending: the app's name and the cartoon pizzaiolo, who waves and calls the pizza ready. */
+    /** The ending: the app's name and the pizzaiolo, who waves and calls the pizza ready. */
     private fun outro(c: Canvas, t: Float, info: CardInfo, face: Bitmap?) {
         val cx = W / 2f
         val k = fade(t, 0f, 0.4f)
@@ -362,7 +362,7 @@ class VideoMaker(private val context: Context) {
 
         // pizzaiolo slides up and waves
         val up = 1 - fade(t, 0.15f, 0.55f).let { 1 - (1 - it) * (1 - it) }
-        val size = 880f
+        val size = 840f // the toque clears the speech bubble
         val bottom = H - 300f + up * 900f
         Pizzaiolo.draw(c, cx - 40f, bottom, size, t, face)
 
