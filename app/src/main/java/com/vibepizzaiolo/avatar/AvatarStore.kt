@@ -22,7 +22,10 @@ object AvatarStore {
         oldFile(context).delete()
         read(sketchFile(context))?.let { return it }
         val crop = read(cropFile(context)) ?: return null
-        return runCatching { FaceSketch.draw(crop) }.getOrNull()?.also { writePng(sketchFile(context), it) }
+        return runCatching {
+            val models = FaceModels.open(context)
+            try { FaceSketch.draw(crop, models?.let { runCatching { it.parts(crop) }.getOrNull() }) } finally { models?.close() }
+        }.getOrNull()?.also { writePng(sketchFile(context), it) }
     }
 
     fun save(context: Context, crop: Bitmap, sketch: Bitmap) {

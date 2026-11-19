@@ -145,6 +145,8 @@ class AvatarActions(
     val takeSelfie: () -> Unit,
     val pickPhoto: () -> Unit,
     val remove: () -> Unit,
+    /** What went wrong with the last photo, if anything. */
+    val note: String? = null,
 )
 
 @Composable
@@ -163,6 +165,7 @@ private fun AvatarRow(a: AvatarActions) {
                 else "This is you as the pizzaiolo: your icon and the chef at the end of your reels.",
                 fontSize = 13.sp, color = Pal.muted,
             )
+            if (a.note != null && !a.busy) Text(a.note, fontSize = 13.sp, color = Pal.flame)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedButton(onClick = a.takeSelfie, enabled = !a.busy, contentPadding = PaddingValues(horizontal = 10.dp)) { Text("Selfie", color = Pal.flame) }
                 OutlinedButton(onClick = a.pickPhoto, enabled = !a.busy, contentPadding = PaddingValues(horizontal = 10.dp)) { Text("Gallery", color = Pal.fg) }

@@ -67,6 +67,8 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
+    // the face models are memory-mapped straight from the APK
+    androidResources { noCompress += "tflite" }
     // the community's data classes are shared with server/
     sourceSets["main"].kotlin.srcDir("../shared/src")
     lint {
@@ -102,6 +104,9 @@ dependencies {
     implementation("androidx.media3:media3-effect:1.4.1")
     implementation("androidx.media3:media3-common:1.4.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // MediaPipe's face detector and selfie segmenter, run with LiteRT, for your face on the pizzaiolo
+    implementation("com.google.ai.edge.litert:litert:1.4.2")
 
     // Offline speech recognition
     implementation("com.alphacephei:vosk-android:0.3.47")

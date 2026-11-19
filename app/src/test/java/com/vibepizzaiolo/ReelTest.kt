@@ -41,12 +41,38 @@ class ReelTest {
 
     @Test fun selfieBecomesAFaceCutToTheHead() {
         val selfie = Bitmap.createBitmap(1200, 1600, Bitmap.Config.ARGB_8888).apply { eraseColor(0xFF8899AA.toInt()) }
-        val face = FaceSketch.sketch(selfie)
+        val drawn = FaceSketch.sketch(selfie)
+        val face = drawn.face
+        assertEquals(FaceSketch.SIZE, drawn.crop.width)
         assertEquals(FaceSketch.SIZE, face.width)
         assertEquals(FaceSketch.SIZE, face.height)
         // inside the head it is drawn, in the corners it is see-through
         assertEquals(255, face.getPixel(FaceSketch.HEAD_CX.toInt(), FaceSketch.HEAD_CY.toInt()) ushr 24)
         assertEquals(0, face.getPixel(2, FaceSketch.SIZE - 3) ushr 24)
+        // a plain grey picture has no face in it
+        assertEquals(false, drawn.faceFound)
+    }
+
+    @Test fun segmentedHeadKeepsHairAndSkinAndDropsTheRest() {
+        // a square whose left half the segmenter calls hair and right half face skin, background below
+        val n = com.vibepizzaiolo.avatar.FaceModels.SEG
+        val k = com.vibepizzaiolo.avatar.FaceModels.CLASSES
+        val parts = FloatArray(n * n * k)
+        for (y in 0 until n) for (x in 0 until n) {
+            val c = when {
+                y > n * 0.85f -> 0
+                x < n / 2 -> com.vibepizzaiolo.avatar.FaceModels.HAIR
+                else -> com.vibepizzaiolo.avatar.FaceModels.FACE_SKIN
+            }
+            parts[(y * n + x) * k + c] = 1f
+        }
+        val square = Bitmap.createBitmap(FaceSketch.SIZE, FaceSketch.SIZE, Bitmap.Config.ARGB_8888).apply { eraseColor(0xFFC09070.toInt()) }
+        val face = FaceSketch.draw(square, parts)
+        val mid = FaceSketch.SIZE / 2
+        assertEquals(255, face.getPixel(mid + 40, mid) ushr 24) // face skin
+        assertEquals(255, face.getPixel(mid - 60, mid - 60) ushr 24) // hair
+        assertEquals(0, face.getPixel(mid, FaceSketch.SIZE - 4) ushr 24) // background
+        assertEquals(0, face.getPixel(2, 2) ushr 24) // far from the head
     }
 
     @Test fun iconIsTheHeadInTheToque() {

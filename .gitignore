@@ -8,6 +8,7 @@ captures/
 .kotlin/
 # generated at build time by scripts/prepare_assets.sh
 app/src/main/assets/models/
+app/src/main/assets/faces/
 app/src/main/assets/voice/
 .cache/
 *.jks

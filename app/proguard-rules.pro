@@ -9,3 +9,7 @@
 -keepnames class * extends java.lang.Throwable
 # Keep Media3's class and method names (still shrunk) so a failed reel says where it failed.
 -keepnames class androidx.media3.** { *; }
+
+# LiteRT (TensorFlow Lite): its native code calls back into these classes by name.
+-keep class org.tensorflow.lite.** { *; }
+-dontwarn org.tensorflow.lite.**

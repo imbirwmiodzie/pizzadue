@@ -16,10 +16,13 @@ import kotlin.math.sqrt
 
 /**
  * Turns a selfie into a pen-and-ink face that fits the drawn pizzaiolo, offline:
- * finds the eyes, puts them at a fixed place in a square, smooths the skin (Kuwahara), draws
+ * finds the eyes, puts them level at a fixed place in a square, smooths the skin (Kuwahara), draws
  * ink lines along the edges (difference of Gaussians), hatches the shadows and washes skin and
- * hair in flat colours. Everything outside the head and the hair around it is transparent, so the
- * face drops into the drawing's head.
+ * hair in flat colours. Everything outside the head and the hair is transparent, so the face drops
+ * into the drawing's head.
+ *
+ * With [FaceModels] the eyes come from MediaPipe's face detector and the head's outline, skin and
+ * hair from its selfie segmenter; without them, from Android's face finder and a colour test.
  */
 object FaceSketch {
     const val SIZE = 360
@@ -39,12 +42,21 @@ object FaceSketch {
     private const val SKIN_SHADE = 0xFFE2AE8C.toInt()
     private const val HAIR = 0xFF8A6440.toInt()
 
-    fun sketch(selfie: Bitmap): Bitmap = draw(cropFace(selfie))
+    /** The eye-aligned square cut from the selfie, the face drawn from it, and whether a face was found at all. */
+    class Drawn(val crop: Bitmap, val face: Bitmap, val faceFound: Boolean)
 
-    /** The eyes found by Android's face finder, or a guess for a centred face. */
-    private class Eyes(val x: Float, val y: Float, val distance: Float)
+    /** Where the eyes are in a photo: the point between them, their distance, and the head's tilt (radians). */
+    class Eyes(val x: Float, val y: Float, val distance: Float, val tilt: Float = 0f)
 
-    private fun findEyes(src: Bitmap): Eyes {
+    fun sketch(selfie: Bitmap, models: FaceModels? = null): Drawn {
+        val eyes = models?.let { runCatching { it.findEyes(selfie) }.getOrNull() } ?: androidEyes(selfie)
+        val crop = cropFace(selfie, eyes ?: guessEyes(selfie))
+        val parts = models?.let { runCatching { it.parts(crop) }.getOrNull() }
+        return Drawn(crop, draw(crop, parts), eyes != null)
+    }
+
+    /** Android's own face finder (no tilt), or null when it finds no face. */
+    private fun androidEyes(src: Bitmap): Eyes? {
         val scale = 480f / max(src.width, src.height)
         val w = ((src.width * scale).toInt() / 2) * 2 // the face finder wants an even width
         val h = (src.height * scale).toInt()
@@ -52,23 +64,29 @@ object FaceSketch {
         val faces = arrayOfNulls<FaceDetector.Face>(1)
         val found = runCatching { FaceDetector(w, h, 1).findFaces(small, faces) }.getOrDefault(0)
         val f = faces[0]
-        if (found > 0 && f != null) {
-            val mid = PointF().also { f.getMidPoint(it) }
-            return Eyes(mid.x / scale, mid.y / scale, f.eyesDistance() / scale)
-        }
+        if (found <= 0 || f == null) return null
+        val mid = PointF().also { f.getMidPoint(it) }
+        return Eyes(mid.x / scale, mid.y / scale, f.eyesDistance() / scale)
+    }
+
+    /** No face found: assume one in the middle, as most selfies are. */
+    private fun guessEyes(src: Bitmap): Eyes {
         val side = min(src.width, src.height)
         return Eyes(src.width / 2f, src.height * 0.42f, side * 0.26f)
     }
 
-    /** A square with the eyes at ([EYE_X], [EYE_Y]), [EYE_D] apart; what lies outside the photo takes its corner colour. */
-    fun cropFace(src: Bitmap): Bitmap {
-        val eyes = findEyes(src)
+    /**
+     * A square with the eyes level at ([EYE_X], [EYE_Y]), [EYE_D] apart; what lies outside the
+     * photo takes its corner colour.
+     */
+    fun cropFace(src: Bitmap, eyes: Eyes): Bitmap {
         val out = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
         val c = Canvas(out)
         c.drawColor(src.getPixel(2, 2) or (0xFF shl 24))
         val k = EYE_D / eyes.distance
         val m = Matrix().apply {
             postTranslate(-eyes.x, -eyes.y)
+            postRotate(-Math.toDegrees(eyes.tilt.toDouble()).toFloat())
             postScale(k, k)
             postTranslate(EYE_X, EYE_Y)
         }
@@ -76,35 +94,61 @@ object FaceSketch {
         return out
     }
 
-    /** The pen-and-ink face, transparent outside the head and hair. */
-    fun draw(square: Bitmap): Bitmap {
+    /**
+     * The pen-and-ink face, transparent outside the head and hair. [parts] is the segmenter's
+     * answer for this square ([FaceModels.parts]); without it the head is an egg from the eyes
+     * plus the hair found by colour.
+     */
+    fun draw(square: Bitmap, parts: FloatArray? = null): Bitmap {
         val n = SIZE
         val px = IntArray(n * n).also { square.getPixels(it, 0, n, 0, 0, n, n) }
         val lum = FloatArray(n * n) { i -> luma(px[i]) }
         val smoothL = kuwahara(lum, 3)
         val lines = dogLines(smoothL, 1.5f, 0.013f)
         val tone = blur(smoothL, 2.5f)
-        val mask = headAndHair(px)
         val egg = headMask(0.1f)
+        val p = parts?.let { upsample(it) }
+        // how much of each pixel is head, and of that, skin, hair or something else (glasses, a hat)
+        val mask: FloatArray
+        val skinShare: FloatArray
+        val hairShare: FloatArray
+        val otherShare: FloatArray
+        if (p != null) {
+            mask = headFromParts(p, egg)
+            skinShare = FloatArray(n * n) { i -> p.skin[i] / (p.skin[i] + p.hair[i] + p.other[i] + 1e-3f) }
+            hairShare = FloatArray(n * n) { i -> p.hair[i] / (p.skin[i] + p.hair[i] + p.other[i] + 1e-3f) }
+            otherShare = FloatArray(n * n) { i -> 1 - skinShare[i] - hairShare[i] }
+        } else {
+            mask = headAndHair(px)
+            skinShare = egg
+            hairShare = FloatArray(n * n) { i -> 1 - egg[i] }
+            otherShare = FloatArray(n * n)
+        }
         val sil = silhouette(mask, 5f)
-        val skinL = skinLevel(tone)
-        val hair = tame(hairColour(px, mask, egg), rgb(HAIR), 0.25f, 0.8f)
+        val skinL = skinLevel(tone, if (p != null) skinShare else null)
+        val hair = tame(hairColour(px, if (p != null) p.hair else null, mask, egg), rgb(HAIR), 0.25f, 0.8f)
         val skin = rgb(SKIN)
         val shade = rgb(SKIN_SHADE)
         val ink = rgb(INK)
         val out = IntArray(n * n)
         for (y in 0 until n) for (x in 0 until n) {
             val i = y * n + x
-            val inFace = egg[i]
-            // washes: skin with a shade tone inside the face, hair colour outside it
+            // skin wash with a shade tone where the face is darker
             val sh = smooth(skinL * 0.86f, skinL * 0.7f, tone[i])
             var r = mix(skin[0], shade[0], sh)
             var g = mix(skin[1], shade[1], sh)
             var b = mix(skin[2], shade[2], sh)
-            val hairT = min(1f, (1 - inFace) * smooth(skinL * 1.05f, skinL * 0.85f, tone[i]) + (1 - inFace) * 0.6f)
+            // hair: its own colour, a little darker where the hair is darker
+            val hairT = if (p != null) hairShare[i] else
+                min(1f, hairShare[i] * smooth(skinL * 1.05f, skinL * 0.85f, tone[i]) + hairShare[i] * 0.6f)
             r = mix(r, hair[0], hairT); g = mix(g, hair[1], hairT); b = mix(b, hair[2], hairT)
+            // glasses, a hat: the photo's own colour, tamed
+            if (otherShare[i] > 0.01f) {
+                val c = tame(rgb(px[i]), skin, 0.2f, 0.7f)
+                r = mix(r, c[0], otherShare[i]); g = mix(g, c[1], otherShare[i]); b = mix(b, c[2], otherShare[i])
+            }
             // teeth and the whites of the eyes stay paper; shiny skin does not
-            if (inFace > 0.5f && tone[i] > skinL * 1.12f && featureZone(x, y)) {
+            if (skinShare[i] > 0.5f && tone[i] > skinL * 1.12f && featureZone(x, y)) {
                 r = mix(r, 252f, 0.7f); g = mix(g, 252f, 0.7f); b = mix(b, 252f, 0.7f)
             }
             // hatching in the darker half of the face and the hair, at 45 degrees with a wobble
@@ -118,6 +162,52 @@ object FaceSketch {
                 (g.roundToInt().coerceIn(0, 255) shl 8) or b.roundToInt().coerceIn(0, 255)
         }
         return Bitmap.createBitmap(out, n, n, Bitmap.Config.ARGB_8888)
+    }
+
+    // ---------------------------------------------------------------- the segmenter's parts
+
+    private class Parts(val hair: FloatArray, val skin: FloatArray, val other: FloatArray)
+
+    /** The segmenter's hair, face-skin and other probabilities, scaled up to the square. */
+    private fun upsample(parts: FloatArray): Parts {
+        val n = SIZE
+        val m = FaceModels.SEG
+        val k = FaceModels.CLASSES
+        val hair = FloatArray(n * n); val skin = FloatArray(n * n); val other = FloatArray(n * n)
+        for (y in 0 until n) for (x in 0 until n) {
+            val gx = ((x + 0.5f) * m / n - 0.5f).coerceIn(0f, m - 1f)
+            val gy = ((y + 0.5f) * m / n - 0.5f).coerceIn(0f, m - 1f)
+            val x0 = gx.toInt(); val y0 = gy.toInt()
+            val x1 = min(x0 + 1, m - 1); val y1 = min(y0 + 1, m - 1)
+            val fx = gx - x0; val fy = gy - y0
+            fun at(c: Int): Float {
+                val a = parts[(y0 * m + x0) * k + c]; val b = parts[(y0 * m + x1) * k + c]
+                val d = parts[(y1 * m + x0) * k + c]; val e = parts[(y1 * m + x1) * k + c]
+                return mix(mix(a, b, fx), mix(d, e, fx), fy)
+            }
+            val i = y * n + x
+            hair[i] = at(FaceModels.HAIR); skin[i] = at(FaceModels.FACE_SKIN); other[i] = at(FaceModels.OTHER)
+        }
+        return Parts(hair, skin, other)
+    }
+
+    /**
+     * The head from the segmenter: face skin and hair near the face, and glasses or a hat on it.
+     * Long hair is cut a little below the jaw, so it never covers the jacket.
+     */
+    private fun headFromParts(p: Parts, egg: FloatArray): FloatArray {
+        val n = SIZE
+        val rx = HEAD_RX * 1.6f
+        val ry = 1.2f * EYE_D * 1.5f
+        val cut = EYE_Y + 1.75f * EYE_D
+        val raw = FloatArray(n * n) { i ->
+            val x = i % n; val y = i / n
+            val ex = (x - HEAD_CX) / rx; val ey = (y - HEAD_CY) / ry
+            val near = (1 - smooth(0.85f, 1f, ex * ex + ey * ey)) * (1 - smooth(cut - 12f, cut + 12f, y.toFloat()))
+            max(p.skin[i], max(p.hair[i], p.other[i] * egg[i])) * near
+        }
+        val b = blur(raw, 1.2f)
+        return FloatArray(n * n) { i -> smooth(0.35f, 0.65f, b[i]) }
     }
 
     // ---------------------------------------------------------------- masks
@@ -176,25 +266,32 @@ object FaceSketch {
         return (dy > -0.12f && dy < 0.12f && dx > 0.25f && dx < 0.75f) || (dy > 0.6f && dy < 1.0f && dx < 0.42f)
     }
 
-    /** The face's own brightness: the median in the middle of the face. */
-    private fun skinLevel(tone: FloatArray): Float {
+    /** The face's own brightness: the median over the skin, or over the middle of the face. */
+    private fun skinLevel(tone: FloatArray, skin: FloatArray?): Float {
         val v = ArrayList<Float>()
-        var y = EYE_Y
-        while (y < EYE_Y + EYE_D * 0.8f) {
-            var x = EYE_X - EYE_D * 0.4f
-            while (x < EYE_X + EYE_D * 0.4f) { v += tone[y.roundToInt() * SIZE + x.roundToInt()]; x += 3 }
-            y += 3
+        if (skin != null) {
+            for (i in tone.indices step 3) if (skin[i] > 0.8f) v += tone[i]
+        }
+        if (v.size < 200) {
+            v.clear()
+            var y = EYE_Y
+            while (y < EYE_Y + EYE_D * 0.8f) {
+                var x = EYE_X - EYE_D * 0.4f
+                while (x < EYE_X + EYE_D * 0.4f) { v += tone[y.roundToInt() * SIZE + x.roundToInt()]; x += 3 }
+                y += 3
+            }
         }
         v.sort()
         return max(0.05f, v[v.size / 2])
     }
 
-    /** The average colour of the hair: inside the mask, outside the face, above the eyes. */
-    private fun hairColour(px: IntArray, mask: FloatArray, egg: FloatArray): FloatArray {
+    /** The average colour of the hair: where the segmenter sees hair, or inside the mask, outside the face, above the eyes. */
+    private fun hairColour(px: IntArray, hair: FloatArray?, mask: FloatArray, egg: FloatArray): FloatArray {
         var r = 0f; var g = 0f; var b = 0f; var n = 0
-        for (y in 0 until EYE_Y.toInt()) for (x in 0 until SIZE) {
+        for (y in 0 until (if (hair != null) SIZE else EYE_Y.toInt())) for (x in 0 until SIZE) {
             val i = y * SIZE + x
-            if (mask[i] > 0.9f && egg[i] < 0.3f) {
+            val take = if (hair != null) hair[i] > 0.8f && mask[i] > 0.5f else mask[i] > 0.9f && egg[i] < 0.3f
+            if (take) {
                 val c = px[i]; r += (c shr 16) and 0xFF; g += (c shr 8) and 0xFF; b += c and 0xFF; n++
             }
         }

@@ -62,6 +62,7 @@ fun App(vm: MainViewModel) {
     val video by vm.video.collectAsStateWithLifecycle()
     val avatarIcon by vm.avatarIcon.collectAsStateWithLifecycle()
     val avatarBusy by vm.avatarBusy.collectAsStateWithLifecycle()
+    val avatarNote by vm.avatarNote.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val community: CommunityViewModel = viewModel()
     val party: PartyViewModel = viewModel()
@@ -266,7 +267,7 @@ fun App(vm: MainViewModel) {
                     settings, voice, vm::updateSettings, vm::preview, vm::previewVolume,
                     avatar = AvatarActions(avatarIcon, avatarBusy, ::selfie, {
                         pickSelfie.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    }, vm::removeAvatar),
+                    }, vm::removeAvatar, avatarNote),
                 )
             }
         }

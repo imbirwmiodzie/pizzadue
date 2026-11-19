@@ -27,6 +27,7 @@ import com.vibepizzaiolo.share.Design
 import com.vibepizzaiolo.share.Format
 import com.vibepizzaiolo.share.ShareUtils
 import com.vibepizzaiolo.avatar.AvatarStore
+import com.vibepizzaiolo.avatar.FaceModels
 import com.vibepizzaiolo.avatar.FaceSketch
 import com.vibepizzaiolo.avatar.Pizzaiolo
 import com.vibepizzaiolo.video.VideoMaker
@@ -96,6 +97,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val _avatarBusy = MutableStateFlow(false)
     val avatarBusy: StateFlow<Boolean> = _avatarBusy.asStateFlow()
+
+    /** Said under the portrait when the last photo did not work out as hoped. */
+    private val _avatarNote = MutableStateFlow<String?>(null)
+    val avatarNote: StateFlow<String?> = _avatarNote.asStateFlow()
 
     init {
         // the idle timer always shows the current bake / preheat time from Settings
@@ -238,13 +243,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val app = getApplication<Application>()
             val drawn = withContext(Dispatchers.Default) {
                 ShareUtils.loadPhoto(app, photo, maxSide = 1400)?.let { selfie ->
-                    val crop = FaceSketch.cropFace(selfie)
-                    crop to FaceSketch.draw(crop)
+                    val models = FaceModels.open(app)
+                    try { FaceSketch.sketch(selfie, models) } finally { models?.close() }
                 }
             }
             if (drawn != null) {
-                withContext(Dispatchers.IO) { AvatarStore.save(app, drawn.first, drawn.second) }
-                _avatar.value = drawn.second
+                withContext(Dispatchers.IO) { AvatarStore.save(app, drawn.crop, drawn.face) }
+                _avatar.value = drawn.face
+                _avatarNote.value = if (drawn.faceFound) null
+                else "No face found in that photo, so this is a guess. Try one looking at the camera, in good light."
+            } else {
+                _avatarNote.value = "That photo didn't open. Try another one."
             }
             _avatarBusy.value = false
         }
@@ -253,6 +262,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun removeAvatar() {
         AvatarStore.delete(getApplication())
         _avatar.value = null
+        _avatarNote.value = null
     }
 
     // ---- voice: start and stop only ----
