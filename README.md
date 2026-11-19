@@ -35,8 +35,8 @@ Facebook do not accept text from other apps, so paste it); WhatsApp and most oth
 
 **Video reel**: the camera icon → *Video reel*. An animation shows how to film one take of about 20 s: from above,
 once around low, the rim with a finger press, the underside (lift the edge) and a slice being pulled. The phone's
-camera records up to 30 s and the app edits it by itself into a vertical 1080×1920 reel of about 14 s, made to be
-watched again and again:
+camera records up to 30 s and the app edits it by itself into a vertical 1080×1920 reel of about 16 s (14 s without
+the seal; about 20 s with the bake cam), made to be watched again and again:
 
 - it **opens on the crunch**: the loudest moment of the rim press, found in the sound, comes first;
 - the recording's own sound plays under every shot, evened out and louder on the crunch, so it still cuts through
