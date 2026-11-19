@@ -36,7 +36,8 @@ class ShareCardTest {
     }
 
     @Test fun captionCarriesTheBakeTheLinkAndTheHashtag() {
-        val c = ShareUtils.caption(info)
+        val c = ShareUtils.caption(com.vibepizzaiolo.share.CaptionInfo(info), reel = false)
+        assertTrue(!c.contains("Sound on"))
         assertTrue(c.contains("Pizza nº 23"))
         assertTrue(c.contains("1:28"))
         assertTrue(c.contains("70% hydration"))

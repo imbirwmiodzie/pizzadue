@@ -22,6 +22,8 @@ android {
         versionName = System.getenv("VIBEPIZZAIOLO_VERSION") ?: "0.1.0"
         // The community server, e.g. https://pizza.example.com. Empty: the community runs on the phone only.
         buildConfigField("String", "COMMUNITY_URL", "\"${System.getenv("VIBEPIZZAIOLO_COMMUNITY_URL") ?: ""}\"")
+        // A Meta app id lets the reel open straight in Instagram's Reels editor. Empty: Instagram's own share menu.
+        buildConfigField("String", "FB_APP_ID", "\"${System.getenv("VIBEPIZZAIOLO_FB_APP_ID") ?: ""}\"")
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
@@ -102,6 +104,13 @@ dependencies {
     implementation("androidx.media3:media3-effect:1.4.1")
     implementation("androidx.media3:media3-common:1.4.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    // the bake cam: films the oven from "vai!" to "pizza out" while the phone stands by itself
+    val camerax = "1.4.1"
+    implementation("androidx.camera:camera-camera2:$camerax")
+    implementation("androidx.camera:camera-lifecycle:$camerax")
+    implementation("androidx.camera:camera-video:$camerax")
+    implementation("androidx.camera:camera-view:$camerax")
 
     // Offline speech recognition
     implementation("com.alphacephei:vosk-android:0.3.47")

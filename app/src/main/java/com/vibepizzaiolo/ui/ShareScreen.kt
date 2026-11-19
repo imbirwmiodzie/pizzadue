@@ -38,6 +38,7 @@ import com.vibepizzaiolo.share.Format
 import com.vibepizzaiolo.share.Target
 
 private val INSTAGRAM = Color(0xFFE1306C)
+private val TIKTOK = Color(0xFF111111)
 private val FACEBOOK = Color(0xFF1877F2)
 private val WHATSAPP = Color(0xFF25D366)
 
@@ -82,25 +83,32 @@ fun ShareScreen(
     }
 }
 
-/** Instagram, Facebook, WhatsApp, the share menu and save: used for cards and reels alike. */
+/** Instagram, TikTok, WhatsApp, Facebook, the share menu and save: used for cards and reels alike. */
 @Composable
-fun ShareButtons(ready: Boolean, onShare: (Target) -> Unit, onSave: () -> Unit) {
+fun ShareButtons(ready: Boolean, onShare: (Target) -> Unit, onSave: () -> Unit, onSaveCover: (() -> Unit)? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BrandButton("Instagram", INSTAGRAM, ready, Modifier.weight(1f)) { onShare(Target.INSTAGRAM) }
-            BrandButton("Facebook", FACEBOOK, ready, Modifier.weight(1f)) { onShare(Target.FACEBOOK) }
+            BrandButton("TikTok", TIKTOK, ready, Modifier.weight(1f)) { onShare(Target.TIKTOK) }
             BrandButton("WhatsApp", WHATSAPP, ready, Modifier.weight(1f)) { onShare(Target.WHATSAPP) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { onShare(Target.OTHER) }, enabled = ready, modifier = Modifier.weight(1f).height(48.dp)) {
-                Text("More…", color = Pal.fg)
+            BrandButton("Facebook", FACEBOOK, ready, Modifier.weight(1f)) { onShare(Target.FACEBOOK) }
+            OutlinedButton(onClick = { onShare(Target.OTHER) }, enabled = ready, modifier = Modifier.weight(1f).height(52.dp)) {
+                Text("More…", color = Pal.fg, maxLines = 1)
             }
-            OutlinedButton(onClick = onSave, enabled = ready, modifier = Modifier.weight(1f).height(48.dp)) {
-                Text("Save to gallery", color = Pal.fg)
+            OutlinedButton(onClick = onSave, enabled = ready, modifier = Modifier.weight(1f).height(52.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
+                Text("Save", color = Pal.fg, maxLines = 1)
+            }
+            if (onSaveCover != null) {
+                OutlinedButton(onClick = onSaveCover, enabled = ready, modifier = Modifier.weight(1f).height(52.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
+                    Text("Cover", color = Pal.fg, maxLines = 1)
+                }
             }
         }
         Text(
-            "The caption with the download link is copied when you share: paste it in your post.",
+            if (onSaveCover != null) "The caption with hashtags is copied when you share: paste it in your post. Add a trending sound in Instagram or TikTok; the crunch stays loud under it. \"Cover\" saves a picture for the reel's cover."
+            else "The caption with hashtags is copied when you share: paste it in your post.",
             color = Pal.muted, fontSize = 12.sp,
         )
     }

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.vibepizzaiolo.video.NightInfo
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.vibepizzaiolo.dough.DoughCalc
@@ -83,7 +84,7 @@ private const val REFRESH_MS = 5000L
 
 /** The Serata tab: a pizza night with friends, from the invitation to the last pizza. */
 @Composable
-fun PartyScreen(vm: PartyViewModel, settings: Settings, onTimer: () -> Unit) {
+fun PartyScreen(vm: PartyViewModel, settings: Settings, onReel: (NightInfo) -> Unit = {}, onTimer: () -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
@@ -110,7 +111,7 @@ fun PartyScreen(vm: PartyViewModel, settings: Settings, onTimer: () -> Unit) {
         ui.serverUrl.isEmpty() -> NoServer(vm::setServerUrl)
         form != null -> NightForm(form, ui.editing, ui.busy, vm::editForm, vm::submitForm, vm::closeForm)
         ui.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Pal.flame) }
-        party != null -> Board(ui, party, settings, vm, onTimer)
+        party != null -> Board(ui, party, settings, vm, onReel, onTimer)
         else -> Welcome(vm::newNight)
     }
 }
@@ -274,6 +275,18 @@ private fun Removable(title: String, sub: String?, removeLabel: String, onRemove
 
 // ---- the night ----
 
+/** The night's numbers for its reel: pizzas out of the oven, the guests, the favourite pizza. */
+internal fun nightInfo(party: Party): NightInfo {
+    val fav = party.menu.maxByOrNull { party.count(it.id) }?.takeIf { party.count(it.id) > 0 }
+    return NightInfo(
+        title = party.title,
+        pizzas = party.queue().count { it.done }.takeIf { it > 0 } ?: party.ordered,
+        guests = party.guests.filter { !it.host }.map { it.name },
+        favourite = fav?.name,
+        favouriteCount = fav?.let { party.count(it.id) } ?: 0,
+    )
+}
+
 private fun ordersText(party: Party, g: PartyGuest): String {
     val names = party.menu.associate { it.id to it.name }
     return g.orders.filter { it.count > 0 }.joinToString { o -> names[o.pizzaId].orEmpty() + if (o.count > 1) " ×${o.count}" else "" }
@@ -288,7 +301,7 @@ private fun invitation(party: Party, link: String): String {
 }
 
 @Composable
-private fun Board(ui: PartyUi, party: Party, settings: Settings, vm: PartyViewModel, onTimer: () -> Unit) {
+private fun Board(ui: PartyUi, party: Party, settings: Settings, vm: PartyViewModel, onReel: (NightInfo) -> Unit, onTimer: () -> Unit) {
     var addingGuest by rememberSaveable { mutableStateOf(false) }
     var assigning by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
@@ -349,7 +362,9 @@ private fun Board(ui: PartyUi, party: Party, settings: Settings, vm: PartyViewMo
                 }
                 OrdersSummary(party)
                 Spacer(Modifier.height(4.dp))
-                BigButton("Start a new night", busy = ui.busy) { confirmDelete = true }
+                BigButton("🎬  Reel of the night") { onReel(nightInfo(party)) }
+                Text("Film one pizza of the night; the reel adds the numbers and thanks everyone by name.", color = Pal.muted, fontSize = 12.sp)
+                BigButton("Start a new night", color = Pal.raised, busy = ui.busy) { confirmDelete = true }
                 TextButton(onClick = { vm.setStage(PartyStage.BAKING) }) { Text("Back to the oven", color = Pal.muted) }
             }
         }

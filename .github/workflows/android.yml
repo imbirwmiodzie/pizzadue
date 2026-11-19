@@ -71,6 +71,8 @@ jobs:
           VIBEPIZZAIOLO_KEY_PASSWORD: ${{ secrets.VIBEPIZZAIOLO_KEY_PASSWORD }}
           # the community server's address, baked into the app; empty keeps the community on the phone
           VIBEPIZZAIOLO_COMMUNITY_URL: ${{ vars.VIBEPIZZAIOLO_COMMUNITY_URL }}
+          # a Meta app id opens Instagram straight in its Reels editor; empty uses Instagram's share menu
+          VIBEPIZZAIOLO_FB_APP_ID: ${{ vars.VIBEPIZZAIOLO_FB_APP_ID }}
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleRelease assembleDebug
 
       - name: Collect APKs

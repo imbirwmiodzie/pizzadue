@@ -7,18 +7,56 @@ import kotlin.math.exp
 import kotlin.math.sin
 
 /**
- * Writes the reel's whole sound as one WAV file: the real crunch of the rim and the voice clip
- * ([layers], each placed at its time), plus a whoosh and a heavy "thud" where the quality seal lands.
+ * Writes the reel's whole sound as one WAV file: the recording's own sound under every shot, the
+ * real crunch of the rim loud and the voice clip ([layers], each placed at its time), plus a
+ * whoosh and a heavy "thud" where the quality seal lands (if it does).
  * Mixing it here, and handing Media3 a single audio file, keeps Media3 from joining sounds of
  * different formats across items, which crashed on some phones.
  */
 object Soundtrack {
     const val RATE = 44_100
+    private const val KNEE = 0.8f
 
-    /** A sound to mix in: mono samples at [RATE], starting at [atMs] into the reel. */
-    class Layer(val atMs: Long, val samples: FloatArray)
+    /** A sound to mix in: mono samples at [RATE], starting at [atMs] into the reel, times [gain]. */
+    class Layer(val atMs: Long, val samples: FloatArray, val gain: Float = 1f)
 
-    fun write(file: File, lengthMs: Long, stampAtMs: Long, layers: List<Layer> = emptyList()) {
+    /**
+     * The gain that brings [samples] up to a strong level (the loudest point near full scale),
+     * at most [max] times louder, so a quiet phone recording still has a crunch you hear over music.
+     */
+    fun normalizer(samples: FloatArray, max: Float = 8f): Float {
+        var peak = 0f
+        for (v in samples) peak = kotlin.math.max(peak, kotlin.math.abs(v))
+        if (peak < 1e-4f) return 1f
+        return (0.9f / peak).coerceAtMost(max)
+    }
+
+    /** The low roar of a wood oven, for the bake cam's shots (filmed without sound). */
+    fun rumble(ms: Long, seed: Long = 11): FloatArray {
+        val n = (RATE * ms / 1000).toInt()
+        val rnd = java.util.Random(seed)
+        var brown = 0f
+        var lp = 0f
+        return FloatArray(n) { i ->
+            brown = (brown + (rnd.nextFloat() * 2 - 1) * 0.02f) * 0.995f
+            lp += 0.02f * (brown - lp)
+            // crackles: rare short clicks
+            val crackle = if (rnd.nextInt(RATE / 6) == 0) rnd.nextFloat() * 0.5f else 0f
+            val edge = minOf(1f, i / (0.15f * RATE), (n - i) / (0.15f * RATE))
+            (lp * 6f + crackle) * edge
+        }
+    }
+
+    /** A short clock tick, for each jump of the bake's time-lapse. */
+    fun tick(): FloatArray {
+        val n = (0.03 * RATE).toInt()
+        return FloatArray(n) { i ->
+            val t = i.toDouble() / RATE
+            (sin(2 * PI * 2_400 * t) * exp(-t * 180) * 0.5).toFloat()
+        }
+    }
+
+    fun write(file: File, lengthMs: Long, stampAtMs: Long?, layers: List<Layer> = emptyList()) {
         val n = (RATE * lengthMs / 1000).toInt()
         val pcm = FloatArray(n)
         for (layer in layers) {
@@ -26,9 +64,20 @@ object Soundtrack {
             for (i in layer.samples.indices) {
                 val j = start + i
                 if (j >= n) break
-                if (j >= 0) pcm[j] += layer.samples[i]
+                if (j >= 0) pcm[j] += layer.samples[i] * layer.gain
             }
         }
+        if (stampAtMs != null) seal(pcm, stampAtMs)
+        // loud parts are rounded off instead of clipping hard
+        for (i in pcm.indices) {
+            val v = pcm[i]
+            val a = kotlin.math.abs(v)
+            if (a > KNEE) pcm[i] = kotlin.math.sign(v) * (KNEE + (1 - KNEE) * kotlin.math.tanh((a - KNEE) / (1 - KNEE)))
+        }
+        writeWav(file, pcm)
+    }
+
+    private fun seal(pcm: FloatArray, stampAtMs: Long) {
         // whoosh as the seal comes down: filtered noise rising in pitch
         val rnd = java.util.Random(7)
         val wStart = ((stampAtMs - 450) * RATE / 1000).toInt().coerceAtLeast(0)
@@ -53,7 +102,6 @@ object Soundtrack {
             val knock = (rnd.nextFloat() * 2 - 1) * exp(-t * 70)
             pcm[j] += (0.85 * body + 0.35 * knock).toFloat()
         }
-        writeWav(file, pcm)
     }
 
     private fun writeWav(file: File, pcm: FloatArray) {

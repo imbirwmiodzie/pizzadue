@@ -46,7 +46,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
-private const val LOOP_S = 13f
+private const val LOOP_S = 18.5f
 private val WOOD_DARK = Color(0xFF3D2716)
 private val WOOD = Color(0xFF5C3B22)
 private val CRUST = Color(0xFFDCA867)
@@ -56,14 +56,26 @@ private val CHEESE = Color(0xFFFFF6E0)
 private data class Step(val n: Int, val title: String, val text: String)
 
 private val STEPS = listOf(
-    Step(1, "From above", "Hold the phone flat over the pizza. The whole pizza in the frame, 2 seconds."),
-    Step(2, "All around, low", "Walk slowly once around the pizza, at rim height, lens towards the centre. About 8 seconds."),
-    Step(3, "The rim", "Film the rim up close and press it with a finger 2–3 times, near the phone. About 4 seconds."),
+    Step(1, "Above", "Hold the phone flat over the pizza. The whole pizza in the frame, 2 seconds."),
+    Step(2, "Around", "Walk slowly once around the pizza, at rim height, lens towards the centre. About 8 seconds."),
+    Step(3, "Rim", "Film the rim up close and press it with a finger 2–3 times, near the phone. Let it crunch! About 4 seconds."),
+    Step(4, "Under", "Lift the edge with the peel or a fork and show the underside, its leopard spots. About 3 seconds."),
+    Step(5, "Slice", "Pull out a slice slowly, cheese stretching. About 4 seconds."),
 )
+
+/** When each step of the animation starts, in seconds of its loop. */
+private val STARTS = floatArrayOf(0f, 3f, 8.5f, 12f, 15f)
 
 /** Shown before recording: an animation of how to film the pizza for the reel. */
 @Composable
-fun RecordGuideScreen(onRecord: () -> Unit, onGallery: () -> Unit, onClose: () -> Unit) {
+fun RecordGuideScreen(
+    onRecord: () -> Unit,
+    onGallery: () -> Unit,
+    onClose: () -> Unit,
+    bakeCam: Boolean = false,
+    night: String? = null,
+    onDropBakeCam: () -> Unit = {},
+) {
     BackHandler(onBack = onClose)
     val transition = rememberInfiniteTransition(label = "guide")
     val t by transition.animateFloat(
@@ -71,22 +83,24 @@ fun RecordGuideScreen(onRecord: () -> Unit, onGallery: () -> Unit, onClose: () -
         animationSpec = infiniteRepeatable(tween((LOOP_S * 1000).toInt(), easing = LinearEasing), RepeatMode.Restart),
         label = "t",
     )
-    val step = when {
-        t < 3.5f -> STEPS[0]
-        t < 9.5f -> STEPS[1]
-        else -> STEPS[2]
-    }
+    val step = STEPS[STARTS.indexOfLast { t >= it }.coerceAtLeast(0)]
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-            Text("Film your pizza", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(if (night != null) "Film the night's pizza" else "Film your pizza", fontSize = 22.sp, fontWeight = FontWeight.Bold)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(start = 8.dp)) {
+        if (bakeCam) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp)) {
+                Text("🔥 The bake cam's launch, bake and pull-out go in too.", fontSize = 13.sp, color = Pal.basil, modifier = Modifier.weight(1f))
+                androidx.compose.material3.TextButton(onClick = onDropBakeCam) { Text("Leave out", color = Pal.muted, fontSize = 13.sp) }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(start = 8.dp)) {
             STEPS.forEach { s ->
                 val on = s.n == step.n
                 Text(
-                    "${s.n} ${s.title}", fontSize = 13.sp,
+                    "${s.n} ${s.title}", fontSize = 12.sp,
                     color = if (on) Pal.flame else Pal.muted,
                     fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
                 )
@@ -96,7 +110,7 @@ fun RecordGuideScreen(onRecord: () -> Unit, onGallery: () -> Unit, onClose: () -
         Text("${step.n} · ${step.title}", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text(step.text, fontSize = 15.sp, color = Pal.fg)
         Text(
-            "The app cuts the reel by itself: from above, around, the rim and its crunch, then the quality seal and you as the pizzaiolo.",
+            "One take, about 20 s. The app cuts it by itself: it opens on the crunch, then your numbers, the seal, and you as the pizzaiolo at the end.",
             fontSize = 12.sp, color = Pal.muted,
         )
         Button(
@@ -124,10 +138,51 @@ private fun DrawScope.scene(t: Float) {
     drawPath(Path().apply { moveTo(w * 0.1f, h * 0.42f); lineTo(w * 0.9f, h * 0.42f); lineTo(w, h); lineTo(0f, h); close() }, WOOD)
 
     when {
-        t < 3.5f -> stepAbove(t, cx, cy, w, h)
-        t < 9.5f -> stepAround((t - 3.5f) / 6f, cx, cy, w, h)
-        else -> stepRim(t - 9.5f, w, h)
+        t < STARTS[1] -> stepAbove(t, cx, cy, w, h)
+        t < STARTS[2] -> stepAround((t - STARTS[1]) / (STARTS[2] - STARTS[1]), cx, cy, w, h)
+        t < STARTS[3] -> stepRim(t - STARTS[2], w, h)
+        t < STARTS[4] -> stepUnder(t - STARTS[3], cx, cy, w, h)
+        else -> stepSlice(t - STARTS[4], cx, cy, w, h)
     }
+}
+
+/** The edge lifted with the peel: the underside with its dark spots, the phone low looking at it. */
+private fun DrawScope.stepUnder(t: Float, cx: Float, cy: Float, w: Float, h: Float) {
+    val lift = (t / 0.8f).coerceIn(0f, 1f) * 22f
+    val r = w * 0.32f
+    rotate(-lift, Offset(cx + r, cy)) {
+        // the underside, seen as the pizza tilts up: a golden oval with leopard spots
+        drawOval(Color(0xFFC98A4B), Offset(cx - r, cy - r * 0.42f), Size(2 * r, 2 * r * 0.42f))
+        for (i in 0 until 16) {
+            val a = i * 2.39f
+            val d = 0.2f + (i % 5) * 0.15f
+            drawCircle(Color(0xFF2A1A0E), 4f + (i % 3) * 3f, Offset(cx + kotlin.math.cos(a) * r * d, cy + sin(a) * r * 0.42f * d))
+        }
+    }
+    // the peel under the edge
+    drawRoundRect(Color(0xFFB9824B), Offset(cx - r * 1.3f, cy + r * 0.05f), Size(r * 0.9f, 18f), CornerRadius(8f))
+    phone(cx + r * 0.2f, cy + h * 0.2f, -70f, 1.4f)
+    ring(w - 60f, 60f, 32f, (t / 3f).coerceAtMost(1f))
+}
+
+/** A slice pulled away, cheese stretching between it and the pizza. */
+private fun DrawScope.stepSlice(t: Float, cx: Float, cy: Float, w: Float, h: Float) {
+    val r = w * 0.3f
+    pizza(cx, cy, r, 0.42f)
+    val pull = (t / 2.5f).coerceIn(0f, 1f)
+    val sx = cx + r * 0.4f + pull * w * 0.22f
+    val sy = cy - pull * h * 0.12f
+    // the gap where the slice was
+    drawPath(Path().apply { moveTo(cx, cy); lineTo(cx + r, cy - r * 0.2f); lineTo(cx + r, cy + r * 0.25f); close() }, WOOD)
+    // cheese strands
+    for (i in 0 until 4) {
+        drawLine(CHEESE, Offset(cx + r * 0.3f, cy - 10f + i * 10f), Offset(sx - 10f, sy - 10f + i * 10f), 5f - i)
+    }
+    val slice = Path().apply { moveTo(sx - r * 0.1f, sy); lineTo(sx + r * 0.75f, sy - r * 0.22f); lineTo(sx + r * 0.75f, sy + r * 0.28f); close() }
+    drawPath(slice, SAUCE)
+    drawLine(CRUST, Offset(sx + r * 0.75f, sy - r * 0.22f), Offset(sx + r * 0.75f, sy + r * 0.28f), 18f)
+    phone(cx - w * 0.3f, cy - h * 0.15f, 30f, 1.4f)
+    ring(w - 60f, 60f, 32f, (t / 3.5f).coerceAtMost(1f))
 }
 
 private fun DrawScope.pizza(cx: Float, cy: Float, r: Float, squash: Float) {

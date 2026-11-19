@@ -12,6 +12,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import androidx.core.graphics.PathParser
+import com.vibepizzaiolo.settings.SealText
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -37,6 +38,8 @@ data class CardInfo(
     val preheatMin: Int,
     val balls: Int,
     val ballWeight: Int,
+    /** What the quality seal says. */
+    val seal: SealText = SealText.QUALITA,
 )
 
 /** Draws the share image: the user's photo plus the bake's numbers and the VibePizzaiolo logo. */
@@ -98,7 +101,7 @@ object CardRenderer {
 
         // Italian quality seal, bottom right
         val r = 120f
-        qualitySeal(c, w - m - r * 0.95f, bottom - r * 1.4f, r, info)
+        qualitySeal(c, w - m - r * 0.95f, bottom - r * 1.4f, r, info, info.seal)
     }
 
     /**
@@ -106,7 +109,8 @@ object CardRenderer {
      * "CON AMORE" round the bottom (hand-made with love), "QUALITÀ SUPERIORE" and the pizza number
      * on a red disc, and ribbon tails in the Italian colours.
      */
-    fun qualitySeal(c: Canvas, cx: Float, cy: Float, r: Float, info: CardInfo) {
+    fun qualitySeal(c: Canvas, cx: Float, cy: Float, r: Float, info: CardInfo, words: SealText = SealText.QUALITA) {
+        val w = if (words == SealText.NONE) SealText.QUALITA else words
         c.save()
         c.rotate(-10f, cx, cy)
 
@@ -167,8 +171,8 @@ object CardRenderer {
 
         // centre
         val center = Paint.Align.CENTER
-        c.drawText("QUALITÀ", cx, cy - r * 0.04f, display(r * 0.23f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.04f })
-        c.drawText("SUPERIORE", cx, cy + r * 0.17f, display(r * 0.16f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.06f })
+        c.drawText(w.big, cx, cy - r * 0.04f, display(r * 0.23f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.04f })
+        c.drawText(w.small, cx, cy + r * 0.17f, display(r * 0.16f).apply { color = IT_WHITE; textAlign = center; letterSpacing = 0.06f })
         c.drawText("Nº ${info.pizzaNo}", cx, cy + r * 0.4f, mono(r * 0.13f, true).apply { color = GOLD; textAlign = center })
 
         c.restore()

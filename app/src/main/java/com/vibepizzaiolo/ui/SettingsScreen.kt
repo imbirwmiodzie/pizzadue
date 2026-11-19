@@ -35,6 +35,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vibepizzaiolo.audio.Clip
 import com.vibepizzaiolo.settings.Settings
+import com.vibepizzaiolo.settings.SealText
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.text.style.TextAlign
 import com.vibepizzaiolo.voice.VoiceStatus
 import kotlin.math.roundToInt
 
@@ -59,6 +68,9 @@ fun SettingsScreen(
             SectionLabel("You, the pizzaiolo")
             Group { AvatarRow(avatar) }
         }
+
+        SectionLabel("Your reels")
+        Group { ReelSettings(s, update) }
 
         SectionLabel("Screen")
         Group {
@@ -200,4 +212,55 @@ private fun PlayButton(onClick: () -> Unit) {
     OutlinedButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)) {
         Text("▶ play", fontFamily = Mono, fontSize = 12.sp, color = Pal.flame)
     }
+}
+
+/** What your reels say about you: handle, the oven and the dough, the series, the seal. */
+@Composable
+private fun ReelSettings(s: Settings, update: ((Settings) -> Settings) -> Unit) {
+    var handle by remember { mutableStateOf(s.handle) }
+    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+        OutlinedTextField(
+            value = handle,
+            onValueChange = { v -> handle = v.take(Settings.HANDLE); update { it.copy(handle = handle) } },
+            label = { Text("Your @handle or name") },
+            placeholder = { Text("@pizza_di_marco") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text("Printed big at the end of every reel and on its cover: the reel is yours.", color = Pal.muted, fontSize = 12.sp)
+    }
+    GroupDivider()
+    StepperRow("Oven temperature", "on the reel; 0 hides it", if (s.ovenC == 0) "–" else "${s.ovenC} °C",
+        { update { it.copy(ovenC = (it.ovenC - 10).coerceIn(Settings.OVEN_C)) } },
+        { update { it.copy(ovenC = if (it.ovenC == 0) 400 else (it.ovenC + 10).coerceIn(Settings.OVEN_C)) } })
+    GroupDivider()
+    StepperRow("Dough fermentation", "hours; 0 hides it", if (s.fermentH == 0) "–" else "${s.fermentH} h",
+        { update { it.copy(fermentH = (it.fermentH - 2).coerceIn(Settings.FERMENT_H)) } },
+        { update { it.copy(fermentH = if (it.fermentH == 0) 24 else (it.fermentH + 2).coerceIn(Settings.FERMENT_H)) } })
+    GroupDivider()
+    StepperRow("A series", "“Pizza nº 47 / 100”; 0 is no series", if (s.seriesGoal == 0) "–" else "${s.seriesGoal}",
+        { update { it.copy(seriesGoal = (it.seriesGoal - 10).coerceIn(Settings.SERIES)) } },
+        { update { it.copy(seriesGoal = (it.seriesGoal + 10).coerceIn(Settings.SERIES)) } })
+    GroupDivider()
+    Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        RowLabel("The seal says", "on reels and the Stamp card")
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            SealText.entries.forEach { st ->
+                val on = st == s.seal
+                Surface(
+                    onClick = { update { it.copy(seal = st) } },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (on) Pal.raised else Pal.bg,
+                    border = if (on) BorderStroke(1.5.dp, Pal.flame) else null,
+                    modifier = Modifier.weight(1f).height(44.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(st.label, fontSize = 12.sp, color = if (on) Pal.flame else Pal.fg, maxLines = 2, textAlign = TextAlign.Center)
+                    }
+                }
+            }
+        }
+    }
+    GroupDivider()
+    SwitchRow("Small app tag at the end", "“made with VibePizzaiolo”, under your handle", s.appTag, { v -> update { it.copy(appTag = v) } })
 }

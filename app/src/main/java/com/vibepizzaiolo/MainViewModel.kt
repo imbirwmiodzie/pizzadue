@@ -28,6 +28,11 @@ import com.vibepizzaiolo.share.Format
 import com.vibepizzaiolo.share.ShareUtils
 import com.vibepizzaiolo.avatar.AvatarStore
 import com.vibepizzaiolo.avatar.Cartoonizer
+import com.vibepizzaiolo.share.CaptionInfo
+import com.vibepizzaiolo.video.BakeCamClip
+import com.vibepizzaiolo.video.NightInfo
+import com.vibepizzaiolo.video.ReelInfo
+import com.vibepizzaiolo.video.ReelStyle
 import com.vibepizzaiolo.video.VideoMaker
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -54,11 +59,11 @@ data class ShareUi(
     val error: String? = null,
 )
 
-/** The pizza reel: the recording guide, making it, then the finished file. */
+/** The pizza reel: the recording guide, making it, then the finished file and its cover. */
 sealed interface VideoUi {
     data object Guide : VideoUi
     data class Working(val progress: Int) : VideoUi
-    data class Ready(val file: File) : VideoUi
+    data class Ready(val file: File, val cover: File) : VideoUi
     data class Failed(val message: String) : VideoUi
 }
 
@@ -84,6 +89,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _video = MutableStateFlow<VideoUi?>(null)
     val video: StateFlow<VideoUi?> = _video.asStateFlow()
+
+    /** The bake cam is open (it replaces the tabs while it films). */
+    private val _bakeCamOpen = MutableStateFlow(false)
+    val bakeCamOpen: StateFlow<Boolean> = _bakeCamOpen.asStateFlow()
+
+    /** The last bake the bake cam filmed; it goes into the next reel while it is fresh. */
+    private val _bakeCam = MutableStateFlow<BakeCamClip?>(null)
+    val bakeCam: StateFlow<BakeCamClip?> = _bakeCam.asStateFlow()
+    private var bakeCamAt = 0L
+
+    /** The pizza night a reel is being made for; null for a single pizza. */
+    private val _night = MutableStateFlow<NightInfo?>(null)
+    val night: StateFlow<NightInfo?> = _night.asStateFlow()
+
+    /** The recording behind the reel on screen, so another style can be made from it. */
+    private var lastRecording: Uri? = null
 
     /** Your cartoon portrait: your icon, and your face on the pizzaiolo at the end of the reel. */
     private val _avatar = MutableStateFlow<Bitmap?>(null)
@@ -181,10 +202,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             whenMs = if (log.lastAt > 0) log.lastAt else System.currentTimeMillis(),
             hydration = s.hydration, salt = s.salt, yeast = s.yeast,
             preheatMin = s.preheatSec / 60, balls = s.balls, ballWeight = s.ballWeight,
+            seal = s.seal,
         )
     }
 
-    fun caption(): String = ShareUtils.caption(cardInfo())
+    fun reelInfo(): ReelInfo {
+        val s = settings.value
+        return ReelInfo(
+            card = cardInfo(), style = ReelStyle.of(s.reelStyle), handle = s.handle,
+            ovenC = s.ovenC, fermentH = s.fermentH, seriesGoal = s.seriesGoal,
+            sealText = s.seal, appTag = s.appTag, night = _night.value,
+        )
+    }
+
+    /** The caption for a card ([reel] false) or the reel. */
+    fun caption(reel: Boolean = false): String {
+        val s = settings.value
+        return ShareUtils.caption(CaptionInfo(cardInfo(), s.ovenC, s.fermentH, s.seriesGoal, if (reel) _night.value else null), reel)
+    }
 
     private var renderJob: Job? = null
     private fun renderCard() {
@@ -201,22 +236,64 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // ---- the pizza reel ----
     private var videoJob: Job? = null
 
-    fun openVideoGuide() { _video.value = VideoUi.Guide }
+    /** The recording guide; with [night], the reel is the pizza night's. */
+    fun openVideoGuide(night: NightInfo? = null) {
+        _night.value = night
+        _video.value = VideoUi.Guide
+    }
 
     fun closeVideo() {
         videoJob?.cancel()
         _video.value = null
+        _night.value = null
+        lastRecording = null
     }
 
-    fun makeVideo(recording: Uri) {
+    // ---- the bake cam ----
+    fun bakeCamFile(): File = File(File(getApplication<Application>().cacheDir, "videos").apply { mkdirs() }, "bakecam.mp4")
+
+    fun openBakeCam() {
+        _bakeCam.value = null
+        if (!timer.value.isActive) selectMode(Mode.BAKE)
+        _bakeCamOpen.value = true
+    }
+
+    fun closeBakeCam() { _bakeCamOpen.value = false }
+
+    /** The pull-out is filmed: on to filming the pizza, and the bake goes into that reel. */
+    fun bakeCamFilmed(clip: BakeCamClip) {
+        _bakeCam.value = clip
+        bakeCamAt = System.currentTimeMillis()
+        _bakeCamOpen.value = false
+        openVideoGuide()
+    }
+
+    /** The bake cam's clip, if it filmed the pizza that is now being shown (the last hour). */
+    private fun freshBakeCam(): BakeCamClip? =
+        _bakeCam.value?.takeIf { System.currentTimeMillis() - bakeCamAt < 60 * 60_000L && it.file.exists() && _night.value == null }
+
+    fun dropBakeCam() { _bakeCam.value = null }
+
+    /** Makes the reel again from the same recording in another [style]. */
+    fun setReelStyle(style: ReelStyle) {
+        if (ReelStyle.of(settings.value.reelStyle) == style && _video.value is VideoUi.Ready) return
+        viewModelScope.launch {
+            repo.update { it.copy(reelStyle = style.ordinal) }
+            lastRecording?.let { makeVideo(it, ReelStyle.of(style.ordinal)) }
+        }
+    }
+
+    fun makeVideo(recording: Uri, style: ReelStyle? = null) {
         videoJob?.cancel()
+        lastRecording = recording
         _video.value = VideoUi.Working(0)
         videoJob = viewModelScope.launch {
             try {
-                val file = VideoMaker(getApplication()).make(recording, cardInfo(), _avatar.value) { p ->
+                val info = reelInfo().let { if (style != null) it.copy(style = style) else it }
+                val reel = VideoMaker(getApplication()).make(recording, info, _avatar.value, freshBakeCam()) { p ->
                     if (_video.value is VideoUi.Working) _video.value = VideoUi.Working(p)
                 }
-                _video.value = VideoUi.Ready(file)
+                _video.value = VideoUi.Ready(reel.video, reel.cover)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

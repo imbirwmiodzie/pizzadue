@@ -50,6 +50,11 @@ import com.vibepizzaiolo.share.ShareUtils
 import com.vibepizzaiolo.timer.Alert
 import com.vibepizzaiolo.timer.Phase
 import com.vibepizzaiolo.voice.AppTab
+import com.vibepizzaiolo.video.ReelStyle
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.compose.runtime.remember
+import androidx.core.content.ContextCompat
 
 @Composable
 fun App(vm: MainViewModel) {
@@ -62,7 +67,29 @@ fun App(vm: MainViewModel) {
     val video by vm.video.collectAsStateWithLifecycle()
     val avatar by vm.avatar.collectAsStateWithLifecycle()
     val avatarBusy by vm.avatarBusy.collectAsStateWithLifecycle()
+    val bakeCamOpen by vm.bakeCamOpen.collectAsStateWithLifecycle()
+    val bakeCam by vm.bakeCam.collectAsStateWithLifecycle()
+    val night by vm.night.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // The app declares the camera permission (for the bake cam), so Android lets it start the
+    // camera app only once that permission is granted: ask first, then run what was waiting.
+    var afterCameraOk by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var afterCameraNo by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val askCamera = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        val run = if (ok) afterCameraOk else afterCameraNo
+        afterCameraOk = null
+        afterCameraNo = null
+        run?.invoke()
+    }
+    fun withCamera(denied: () -> Unit, granted: () -> Unit) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) granted()
+        else {
+            afterCameraOk = granted
+            afterCameraNo = denied
+            askCamera.launch(Manifest.permission.CAMERA)
+        }
+    }
     val community: CommunityViewModel = viewModel()
     val party: PartyViewModel = viewModel()
     val partyUi by party.ui.collectAsStateWithLifecycle()
@@ -84,7 +111,7 @@ fun App(vm: MainViewModel) {
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) vm.openShare(uri)
     }
-    fun openCamera() {
+    fun openCamera() = withCamera({ pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
         val uri = ShareUtils.newPhotoUri(context)
         photoUri = uri
         try {
@@ -104,7 +131,7 @@ fun App(vm: MainViewModel) {
     val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) vm.makeVideo(uri)
     }
-    fun startRecording() {
+    fun startRecording() = withCamera({ pickVideo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)) }) {
         val uri = ShareUtils.newVideoUri(context)
         videoUri = uri
         try {
@@ -124,7 +151,7 @@ fun App(vm: MainViewModel) {
     val pickSelfie = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) vm.makeAvatar(uri)
     }
-    fun selfie() {
+    fun selfie() = withCamera({ pickSelfie.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
         val uri = ShareUtils.newPhotoUri(context)
         selfieUri = uri
         try {
@@ -141,8 +168,12 @@ fun App(vm: MainViewModel) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     TextButton(onClick = { askSource = false; vm.openVideoGuide() }) {
-                        Text("🎬  Video reel (film 15 s, the app edits it)", color = Pal.flame)
+                        Text("🎬  Video reel (film 20 s, the app edits it)", color = Pal.flame)
                     }
+                    TextButton(onClick = {
+                        askSource = false
+                        withCamera({ Toast.makeText(context, "The bake cam needs the camera", Toast.LENGTH_LONG).show() }) { vm.openBakeCam() }
+                    }) { Text("🔥  Bake cam first (films the launch and the bake, hands free)", color = Pal.flame) }
                     TextButton(onClick = { askSource = false; openCamera() }) { Text("📷  Take a photo", color = Pal.fg) }
                     TextButton(onClick = {
                         askSource = false
@@ -161,6 +192,23 @@ fun App(vm: MainViewModel) {
         )
     }
 
+    // ---- the bake cam replaces the tabs while it films ----
+    if (bakeCamOpen) {
+        Scaffold(containerColor = Pal.bg) { pad ->
+            Box(Modifier.fillMaxSize().padding(pad)) {
+                BakeCamScreen(
+                    timer = timer,
+                    file = vm.bakeCamFile(),
+                    onStartBake = vm::startCurrent,
+                    onPizzaOut = vm::stop,
+                    onFilmed = vm::bakeCamFilmed,
+                    onClose = vm::closeBakeCam,
+                )
+            }
+        }
+        return
+    }
+
     // ---- reel screens replace the tabs while open ----
     val videoUi = video
     if (videoUi != null) {
@@ -171,11 +219,25 @@ fun App(vm: MainViewModel) {
                         onRecord = ::startRecording,
                         onGallery = { pickVideo.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)) },
                         onClose = vm::closeVideo,
+                        bakeCam = bakeCam != null && night == null,
+                        night = night?.title,
+                        onDropBakeCam = vm::dropBakeCam,
                     )
                 } else {
                     VideoScreen(
                         ui = videoUi,
-                        onShare = { target -> (videoUi as? VideoUi.Ready)?.file?.let { ShareUtils.shareVideo(context, it, vm.caption(), target) } },
+                        style = ReelStyle.of(settings.reelStyle),
+                        onStyle = vm::setReelStyle,
+                        onShare = { target -> (videoUi as? VideoUi.Ready)?.file?.let { ShareUtils.shareVideo(context, it, vm.caption(reel = true), target) } },
+                        onSaveCover = {
+                            val cover = (videoUi as? VideoUi.Ready)?.cover
+                            val ok = cover != null && ShareUtils.saveImageFileToGallery(context, cover)
+                            Toast.makeText(
+                                context,
+                                if (ok) "Cover saved to Pictures/VibePizzaiolo: pick it as the reel's cover" else "Saving needs Android 10 or newer",
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        },
                         onSave = {
                             val file = (videoUi as? VideoUi.Ready)?.file
                             val ok = file != null && ShareUtils.saveVideoToGallery(context, file)
@@ -260,7 +322,7 @@ fun App(vm: MainViewModel) {
                     }
                 }
                 AppTab.DOUGH -> DoughScreen(settings, voice, vm::updateSettings) { vm.selectTab(AppTab.SETTINGS) }
-                AppTab.PARTY -> PartyScreen(party, settings) { vm.selectTab(AppTab.TIMER) }
+                AppTab.PARTY -> PartyScreen(party, settings, onReel = vm::openVideoGuide) { vm.selectTab(AppTab.TIMER) }
                 AppTab.COMMUNITY -> CommunityScreen(community, avatar)
                 AppTab.SETTINGS -> SettingsScreen(
                     settings, voice, vm::updateSettings, vm::preview, vm::previewVolume,

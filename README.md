@@ -24,7 +24,7 @@ Tag a commit `v1.0.0` to publish a numbered release.
 
 Camera icon on the Timer (and a big **Share this pizza** button right after a bake) → take a photo or pick one from
 the gallery → choose a design (**Stamp**, **Bake sheet**, **Ticket**) and a format (**Post 4:5** 1080×1350,
-**Story 9:16** 1080×1920, **Square** 1080×1080) → **Instagram**, **Facebook**, **WhatsApp**, **More…** (Android's share
+**Story 9:16** 1080×1920, **Square** 1080×1080) → **Instagram**, **TikTok**, **WhatsApp**, **Facebook**, **More…** (Android's share
 menu) or **Save to gallery** (Pictures/VibePizzaiolo).
 
 The card carries the real bake: pizza number, bake time, hydration, salt, yeast, preheat, dough balls, and the
@@ -33,22 +33,53 @@ Facebook do not accept text from other apps, so paste it); WhatsApp and most oth
 
 ## Pizza reel and you as the pizzaiolo
 
-**Video reel**: the camera icon → *Video reel*. An animation shows how to film (from above, once around low, the rim
-with a finger press), then the phone's camera records up to 20 s. The app edits it by itself into a vertical
-1080×1920 reel: from above → two quick cuts around → the rim with its real crunch → the **QUALITÀ SUPERIORE** seal
-falling onto the pizza with a thud → the ending with the cartoon pizzaiolo waving and *“La pizza è pronta!”*.
-Made on the phone with Media3 Transformer; shared like the cards (Instagram, Facebook, WhatsApp, more, save).
+**Video reel**: the camera icon → *Video reel*. An animation shows how to film one take of about 20 s: from above,
+once around low, the rim with a finger press, the underside (lift the edge) and a slice being pulled. The phone's
+camera records up to 30 s and the app edits it by itself into a vertical 1080×1920 reel of about 14 s, made to be
+watched again and again:
+
+- it **opens on the crunch**: the loudest moment of the rim press, found in the sound, comes first;
+- the recording's own sound plays under every shot, evened out and louder on the crunch, so it still cuts through
+  a trending sound added in Instagram or TikTok;
+- from above with **your numbers** as chips (hydration, fermentation hours, oven °C, bake time), around, the rim,
+  underneath, then the **seal** lands on moving footage with a thud;
+- it **ends on the slice** with **your @handle** big, the cartoon pizzaiolo calling *“La pizza è pronta!”* and an
+  optional small *made with VibePizzaiolo*; the words fade out at the very end, so the loop back to the crunch is clean.
+
+Words stay inside the area Instagram and TikTok leave free (below their top bar, above their caption, left of their
+buttons). Four looks, switchable on the finished reel (it is made again from the same recording):
+**Stats** (the numbers), **ASMR** (sound, almost no text), **Funny** (the cartoon pizzaiolo comments every shot),
+**No text** (for writing your own in the app). **Cover** saves a picture for the reel's cover in the profile grid.
+Shared like the cards to **Instagram, TikTok, WhatsApp, Facebook**, more or save. The caption has a hook line, the
+numbers and the hashtags pizza people search (#pizzanapoletana #cornicione #pizzaoven…), #VibePizzaiolo last.
+With a Meta app id in the repository variable `VIBEPIZZAIOLO_FB_APP_ID`, Instagram opens straight in its Reels editor;
+without it, Instagram asks where the reel goes.
+
+**Settings → Your reels**: your @handle or name, oven temperature, fermentation hours, a series (*Pizza nº 47 / 100*,
+also as a hashtag), what the seal says (*Qualità superiore*, *Fatta in casa*, *Con amore* or no seal; the Stamp card
+uses it too) and the small app tag.
+
+**Bake cam**: the camera icon → *Bake cam first*. Stand the phone 1–2 m from the oven, facing its mouth, away from the
+heat. It films by itself (picture only: the microphone stays with the voice commands) and knows from the timer when the
+pizza went in (*“vai!”*) and came out (*“pizza out”*). Then film the pizza as usual: the reel adds the launch, the bake as
+a time-lapse with the real clock, and the pull-out, with the oven's roar under it.
+
+**Reel of the night**: on the *Serata* tab, once the night is finished. Film one pizza; the reel shows the night's
+title, the pizzas and the guests, the favourite pizza, and ends thanking everyone by name.
 
 **In the browser, nothing to install**: the server (see [server/README.md](server/README.md)) also serves the reel as a
-web page at `https://<server>/reel`. Tap *Open the camera*, then the red button: the page counts down and says what to
-film (3 s from above, 9 s around, 5 s on the rim) while it records, keeping only the seconds that go into the reel, then
-adds the seal and the ending with the pizzaiolo and the voice. It films at 1080p / 30 fps without HDR whatever the camera
-app is set to, works in Chrome and Safari (MP4; other browsers save WebM), and makes the reel on the phone: nothing is
-uploaded. Add `?n=12&bake=92` to the link to print the pizza number and the bake time (seconds).
+web page at `https://<server>/reel`. Pick a look and (optionally) your numbers, tap *Open the camera*, then the red
+button: the page counts down and says what to film, in the reel's order, starting with the crunch (3 s on the rim, 3 s
+from above, 8 s around, 3 s underneath, 3 s holding still for the seal, 5 s pulling a slice), keeping only the seconds
+that go into the reel, so it is ready the moment the last shot ends. It films at 1080p / 30 fps without HDR whatever the
+camera app is set to, works in Chrome and Safari (MP4; other browsers save WebM), and makes the reel on the phone:
+nothing is uploaded. The finished page shares the reel, saves it and its cover picture, and copies the caption.
+The link can carry the numbers: `?n=12&bake=92&hyd=70&ferm=48&temp=450&goal=100&by=pizza_di_marco&seal=casa&style=funny`
+(the browser remembers them; `tag=0` leaves out the app tag).
 
 **You as the pizzaiolo**: Settings → *You, the pizzaiolo* → Selfie. The app finds your face, draws it as a cartoon
-(flat colours and ink outlines), shows it as your icon on the Timer and puts it on the pizzaiolo at the end of every
-reel. Everything stays on the phone.
+(flat colours and ink outlines), shows it as your icon on the Timer and puts it on the pizzaiolo in every reel.
+Everything stays on the phone.
 
 ## Pizzaioli: the community
 

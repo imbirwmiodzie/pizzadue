@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -35,6 +36,21 @@ data class Settings(
     val voicePl: Boolean = true,
     val balls: Int = 4,
     val ballWeight: Int = 250,
+    // ---- the reel and the cards: you and your numbers ----
+    /** Your name or @handle, printed on the reel's ending and cover. Empty: none. */
+    val handle: String = "",
+    /** Oven temperature in °C, shown on the reel. 0: not shown. */
+    val ovenC: Int = 0,
+    /** Dough fermentation in hours, shown on the reel. 0: not shown. */
+    val fermentH: Int = 0,
+    /** A series like "Pizza nº 47 / 100". 0: no series. */
+    val seriesGoal: Int = 0,
+    /** What the quality seal says, or no seal at all. */
+    val seal: SealText = SealText.QUALITA,
+    /** A small "made with VibePizzaiolo" at the very end of the reel. */
+    val appTag: Boolean = true,
+    /** The look of the reel; the last one chosen. */
+    val reelStyle: Int = 0,
 ) {
     companion object {
         val HYDRATION = 50f..90f
@@ -42,7 +58,19 @@ data class Settings(
         val YEAST = 0f..3f
         val BAKE_SEC = 15..30 * 60
         val PREHEAT_SEC = 5 * 60..90 * 60
+        val OVEN_C = 0..550
+        val FERMENT_H = 0..120
+        val SERIES = 0..1000
+        const val HANDLE = 30
     }
+}
+
+/** The words in the middle of the quality seal; [NONE] leaves the seal off. */
+enum class SealText(val big: String, val small: String, val label: String) {
+    QUALITA("QUALITÀ", "SUPERIORE", "Qualità superiore"),
+    CASA("FATTA", "IN CASA", "Fatta in casa"),
+    AMORE("CON", "AMORE", "Con amore"),
+    NONE("", "", "No seal"),
 }
 
 /** The pizzas baked so far: numbers the share cards ("Pizza nº 23") and gives the last bake time. */
@@ -77,6 +105,13 @@ class SettingsRepository(context: Context) {
         val bakeCount = intPreferencesKey("bake_count")
         val lastBakeMs = longPreferencesKey("last_bake_ms")
         val lastBakeAt = longPreferencesKey("last_bake_at")
+        val handle = stringPreferencesKey("handle")
+        val ovenC = intPreferencesKey("oven_c")
+        val fermentH = intPreferencesKey("ferment_h")
+        val seriesGoal = intPreferencesKey("series_goal")
+        val seal = intPreferencesKey("seal")
+        val appTag = booleanPreferencesKey("app_tag")
+        val reelStyle = intPreferencesKey("reel_style")
     }
 
     val bakeLog: Flow<BakeLog> = store.data.map { p ->
@@ -92,9 +127,9 @@ class SettingsRepository(context: Context) {
         }
     }
 
-    val flow: Flow<Settings> = store.data.map { p ->
+    private fun read(p: Preferences): Settings {
         val d = Settings()
-        Settings(
+        return Settings(
             hydration = p[K.hydration] ?: d.hydration,
             salt = p[K.salt] ?: d.salt,
             yeast = p[K.yeast] ?: d.yeast,
@@ -114,21 +149,21 @@ class SettingsRepository(context: Context) {
             voicePl = p[K.voicePl] ?: d.voicePl,
             balls = p[K.balls] ?: d.balls,
             ballWeight = p[K.ballWeight] ?: d.ballWeight,
+            handle = p[K.handle] ?: d.handle,
+            ovenC = p[K.ovenC] ?: d.ovenC,
+            fermentH = p[K.fermentH] ?: d.fermentH,
+            seriesGoal = p[K.seriesGoal] ?: d.seriesGoal,
+            seal = SealText.entries.getOrNull(p[K.seal] ?: -1) ?: d.seal,
+            appTag = p[K.appTag] ?: d.appTag,
+            reelStyle = p[K.reelStyle] ?: d.reelStyle,
         )
     }
 
+    val flow: Flow<Settings> = store.data.map { read(it) }
+
     suspend fun update(transform: (Settings) -> Settings) {
         store.edit { p ->
-            val d = Settings()
-            val cur = Settings(
-                p[K.hydration] ?: d.hydration, p[K.salt] ?: d.salt, p[K.yeast] ?: d.yeast,
-                p[K.bakeSec] ?: d.bakeSec, p[K.preheatSec] ?: d.preheatSec,
-                p[K.ticks] ?: d.ticks, p[K.pronta] ?: d.pronta, p[K.forno] ?: d.forno, p[K.gira] ?: d.gira,
-                p[K.bright] ?: d.bright, p[K.volume] ?: d.volume, p[K.night] ?: d.night, p[K.asAlarm] ?: d.asAlarm, p[K.vibrate] ?: d.vibrate, p[K.flash] ?: d.flash,
-                p[K.voiceEn] ?: d.voiceEn, p[K.voicePl] ?: d.voicePl,
-                p[K.balls] ?: d.balls, p[K.ballWeight] ?: d.ballWeight,
-            )
-            val s = transform(cur)
+            val s = transform(read(p))
             p[K.hydration] = s.hydration.coerceIn(Settings.HYDRATION)
             p[K.salt] = s.salt.coerceIn(Settings.SALT)
             p[K.yeast] = s.yeast.coerceIn(Settings.YEAST)
@@ -148,6 +183,13 @@ class SettingsRepository(context: Context) {
             p[K.voicePl] = s.voicePl
             p[K.balls] = s.balls.coerceIn(1, 99)
             p[K.ballWeight] = s.ballWeight.coerceIn(50, 2000)
+            p[K.handle] = s.handle.trim().take(Settings.HANDLE)
+            p[K.ovenC] = s.ovenC.coerceIn(Settings.OVEN_C)
+            p[K.fermentH] = s.fermentH.coerceIn(Settings.FERMENT_H)
+            p[K.seriesGoal] = s.seriesGoal.coerceIn(Settings.SERIES)
+            p[K.seal] = s.seal.ordinal
+            p[K.appTag] = s.appTag
+            p[K.reelStyle] = s.reelStyle.coerceAtLeast(0)
         }
     }
 

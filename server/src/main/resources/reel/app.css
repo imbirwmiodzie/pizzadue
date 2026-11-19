@@ -46,6 +46,35 @@ h1 { margin: 4px 0 0; font-size: 30px; line-height: 1.12; letter-spacing: -.01em
 .btn:active { transform: scale(.98); }
 .actions { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
 
+/* ---- style chips and the pizzaiolo's numbers ---- */
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.chip {
+  min-height: 44px; border-radius: 12px; border: 1.5px solid transparent; cursor: pointer;
+  background: var(--card); color: var(--fg); font-weight: 600; font-size: 15px;
+}
+.chip[aria-checked="true"] { background: var(--raised); border-color: var(--flame); color: var(--flame); }
+.chips + .fine { margin-top: 6px; }
+.yours { background: var(--card); border-radius: 16px; padding: 4px 14px; }
+.yours summary { cursor: pointer; padding: 10px 0; font-weight: 700; }
+.yours[open] { padding-bottom: 14px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); min-width: 0; }
+.field.wide, .check { grid-column: 1 / -1; }
+.field input, .field select {
+  width: 100%; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--fg); font: inherit; font-size: 16px;
+}
+.check { display: flex; align-items: center; gap: 10px; font-size: 14px; min-height: 44px; }
+.check input { width: 22px; height: 22px; accent-color: var(--flame); }
+.yours .fine { margin-top: 10px; }
+.caption { background: var(--card); border-radius: 16px; padding: 12px 14px; }
+.caption pre {
+  margin: 0 0 10px; white-space: pre-wrap; word-break: break-word; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.caption .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.btn.small { width: auto; min-height: 44px; font-size: 15px; padding: 0 16px; }
+.copied { color: var(--basil); font-size: 13px; }
+
 .result {
   display: block; width: 100%; max-height: 62dvh; aspect-ratio: 9 / 16; object-fit: contain;
   background: #000; border-radius: 16px;

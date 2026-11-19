@@ -19,7 +19,7 @@ class RecordPizzaVideo : ActivityResultContract<Uri, Boolean>() {
     override fun parseResult(resultCode: Int, intent: Intent?): Boolean = resultCode == Activity.RESULT_OK
 
     companion object {
-        const val MAX_SECONDS = 20
+        const val MAX_SECONDS = 30
     }
 }
 
