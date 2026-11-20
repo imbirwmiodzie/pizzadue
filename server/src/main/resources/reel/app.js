@@ -619,7 +619,7 @@
     // the pizzaiolo slides up and waves
     const f = fade(t, 0.15, 0.55);
     const up = 1 - (1 - (1 - f) * (1 - f));
-    pizzaiolo(c, cx - 40, H - 300 + up * 900, 880, t);
+    pizzaiolo(c, cx - 40, H - 300 + up * 900, 840, t); // the toque clears the speech bubble
 
     // speech bubble, timed with the voice
     const b = fade(t, VOICE_AT, 0.25);
@@ -658,122 +658,271 @@
     }
   }
 
-  /** The cartoon pizzaiolo: hat, white jacket, red neckerchief, a peel with a pizza, waving. */
+  /**
+   * The pizzaiolo in pen and ink, as the app draws him (Pizzaiolo.kt): brown ink lines put down
+   * twice like a quick sketch, hatched shadows, flat colour a touch off the line. Toque, jacket,
+   * knotted neckerchief, a peel with a pizza in one hand, waving with the other.
+   */
   function pizzaiolo(c, cx, bottom, s, t) {
     const P = {
-      outline: '#2A1E16', skin: '#F2C29B', cheek: 'rgba(232,106,90,0.33)', white: '#FBF8F2', shade: '#E3DED3',
-      red: '#CE2B37', wood: '#B9824B', crust: '#E2B06E', sauce: '#C6372A', cheese: '#FFF4DC', basil: '#2F8F3A', tache: '#4A2C1A',
+      ink: '#2A1E16', white: '#FBF7EE', shade: '#E9E1D2', skin: '#F0C7A4', cheek: 'rgba(232,106,90,0.28)', red: '#C8323A',
+      wood: '#C08A55', crust: '#E3AE68', sauce: '#C4402F', cheese: '#FFF6E0', basil: '#3E8C3F', tache: '#4A2C1A',
     };
-    const top = bottom - s;
-    const lw = s * 0.012;
+    const PI = Math.PI, rad = (d) => (d * PI) / 180;
+    const k = penKit(c, s, 11, P.ink);
+    const top = bottom - s, HS = 0.88;
+    const headCy = top + s * 0.36, hrx = s * 0.128, hry = s * 0.152, shoulderY = top + s * 0.56;
     c.save();
-    c.lineJoin = 'round';
-    c.lineCap = 'round';
-    c.strokeStyle = P.outline;
-    c.lineWidth = lw;
-    const shape = (col) => { c.fillStyle = col; c.fill(); c.stroke(); };
-    const circle = (x, y, r) => { c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); };
-    const oval = (l, tp, rt, bt) => { c.beginPath(); c.ellipse((l + rt) / 2, (tp + bt) / 2, (rt - l) / 2, (bt - tp) / 2, 0, 0, Math.PI * 2); };
-    const rad = (d) => (d * Math.PI) / 180;
 
-    const shoulderY = top + s * 0.56, headCy = top + s * 0.40, headR = s * 0.165;
-
-    // waving arm, behind the body
-    const wave = -150 + 22 * Math.sin(t * 2 * Math.PI * 1.6);
+    // waving arm, behind the body: shoulder, elbow out, the forearm swings
+    const sw = Math.sin(t * 2 * PI * 1.6);
+    const sh = [cx - s * 0.176, shoulderY + s * 0.05], el = [cx - s * 0.2746, shoulderY];
+    const fa = rad(-96 + 14 * sw), hand = [el[0] + Math.cos(fa) * s * 0.18, el[1] + Math.sin(fa) * s * 0.18];
+    const arm = penLimb(sh, [el[0] + s * 0.02, el[1] + s * 0.06], el, s * 0.09, s * 0.078);
+    const fore = penLimb(el, [(el[0] + hand[0]) / 2, (el[1] + hand[1]) / 2], hand, s * 0.078, s * 0.068);
+    k.shape(fore.outline, P.white); k.shadow(fore.outline, (x) => (x - (el[0] + hand[0]) / 2) / (s * 0.03) + 0.5);
+    k.shape(arm.outline, P.white); k.shadow(arm.outline, (x, y) => (y - el[1] - s * 0.01) / (s * 0.03));
+    k.stroke(PB().M(...fore.end[0]).Q((fore.end[0][0] + fore.end[1][0]) / 2, (fore.end[0][1] + fore.end[1][1]) / 2 + s * 0.012, ...fore.end[1]).pts, { w: 0.8 });
     {
-      const x = cx - s * 0.25, y = shoulderY + s * 0.03;
-      c.save();
-      c.translate(x, y); c.rotate(rad(wave)); c.translate(-x, -y);
-      roundRect(c, x - s * 0.045, y, s * 0.09, s * 0.26, s * 0.045);
-      shape(P.white);
-      circle(x, y + s * 0.28, s * 0.045);
-      shape(P.skin);
-      c.restore();
+      const x = hand[0], y = hand[1] - s * 0.045, rot = fa + PI / 2, cr = Math.cos(rot), sr = Math.sin(rot);
+      const T = (dx, dy) => [x + dx * s * cr - dy * s * sr, y + dx * s * sr + dy * s * cr];
+      const pb = PB().M(...T(-0.03, 0.03));
+      for (const q of [[-0.042, 0, -0.04, -0.03, -0.034, -0.045], [-0.036, -0.07, -0.02, -0.075, -0.017, -0.052], [-0.016, -0.08, 0, -0.082, 0, -0.055],
+        [0.002, -0.079, 0.019, -0.077, 0.017, -0.05], [0.022, -0.068, 0.036, -0.062, 0.032, -0.04], [0.034, -0.025, 0.036, -0.012, 0.04, -0.012],
+        [0.056, -0.024, 0.068, -0.012, 0.054, 0.004], [0.044, 0.016, 0.036, 0.03, 0.028, 0.032]]) pb.C(...T(q[0], q[1]), ...T(q[2], q[3]), ...T(q[4], q[5]));
+      pb.L(...T(-0.03, 0.03));
+      k.shape(pb.pts, P.skin, { w: 0.85 });
     }
 
     // jacket
-    c.beginPath();
-    c.moveTo(cx - s * 0.27, shoulderY);
-    c.quadraticCurveTo(cx, shoulderY - s * 0.05, cx + s * 0.27, shoulderY);
-    c.lineTo(cx + s * 0.31, bottom);
-    c.lineTo(cx - s * 0.31, bottom);
-    c.closePath();
-    shape(P.white);
-    c.fillStyle = P.shade;
-    c.fillRect(cx - s * 0.29, bottom - s * 0.06, s * 0.58, s * 0.059);
-    c.fillStyle = P.outline;
+    const body = PB().M(cx - s * 0.0704, shoulderY - s * 0.045)
+      .C(cx - s * 0.1408, shoulderY - s * 0.03, cx - s * 0.1971, shoulderY - s * 0.01, cx - s * 0.2182, shoulderY + s * 0.07)
+      .C(cx - s * 0.2358, shoulderY + s * 0.17, cx - s * 0.2323, bottom - s * 0.1, cx - s * 0.2394, bottom)
+      .L(cx + s * 0.2394, bottom)
+      .C(cx + s * 0.2323, bottom - s * 0.1, cx + s * 0.2358, shoulderY + s * 0.17, cx + s * 0.2182, shoulderY + s * 0.07)
+      .C(cx + s * 0.1971, shoulderY - s * 0.01, cx + s * 0.1408, shoulderY - s * 0.03, cx + s * 0.0704, shoulderY - s * 0.045).pts;
+    k.fill(body, P.white);
+    k.shadow(body, (x, y) => (x - (cx + s * 0.1197)) / (s * 0.02) + (y - shoulderY) / (s * 0.3));
+    k.shadow(body, (x, y) => (y - (bottom - s * 0.045)) / (s * 0.01), { angle: 20, spacing: 0.009, alpha: 0.5 });
+    k.stroke(body);
+    k.stroke(PB().M(cx + s * 0.0493, shoulderY + s * 0.03).C(cx + s * 0.0704, shoulderY + s * 0.1, cx + s * 0.0422, shoulderY + s * 0.2, cx + s * 0.0528, bottom).pts, { w: 0.8 });
     for (let i = 0; i < 3; i++) {
-      const y = shoulderY + s * (0.12 + i * 0.09);
-      circle(cx - s * 0.06, y, s * 0.014); c.fill();
-      circle(cx + s * 0.06, y, s * 0.014); c.fill();
+      const y = shoulderY + s * (0.1 + i * 0.085);
+      for (const bx of [cx - s * 0.0352, cx + s * 0.1091]) k.shape(penEllipse(bx, y, s * 0.014, s * 0.013), P.shade, { w: 0.6 });
     }
-    // neckerchief
-    c.beginPath();
-    c.moveTo(cx - s * 0.12, shoulderY - s * 0.02);
-    c.lineTo(cx + s * 0.12, shoulderY - s * 0.02);
-    c.lineTo(cx, shoulderY + s * 0.1);
-    c.closePath();
-    shape(P.red);
+    k.stroke(PB().M(cx - s * 0.1408, shoulderY + s * 0.12).Q(cx - s * 0.1197, shoulderY + s * 0.2, cx - s * 0.1408, shoulderY + s * 0.27).pts, { w: 0.55, alpha: 0.8 });
+    k.stroke(PB().M(cx + s * 0.176, bottom - s * 0.02).Q(cx + s * 0.1549, bottom - s * 0.08, cx + s * 0.169, bottom - s * 0.13).pts, { w: 0.5, alpha: 0.7 });
 
-    // the peel with a pizza, in the other hand
+    // neck, collar, neckerchief
+    const chin = headCy + hry * HS * 0.6;
+    const neck = PB().M(cx - s * 0.05, chin).L(cx - s * 0.06, shoulderY - s * 0.01).L(cx + s * 0.06, shoulderY - s * 0.01).L(cx + s * 0.05, chin).pts;
+    k.shape(neck, P.skin);
+    k.shadow(neck, (x, y) => (headCy + hry * HS * 0.98 - y) / (s * 0.01) + 0.6, { angle: 10, spacing: 0.008 });
+    k.shape(PB().M(cx - s * 0.11, shoulderY - s * 0.045).Q(cx, shoulderY, cx + s * 0.11, shoulderY - s * 0.045)
+      .L(cx + s * 0.1, shoulderY - s * 0.075).Q(cx, shoulderY - s * 0.035, cx - s * 0.1, shoulderY - s * 0.075).pts, P.white, { w: 0.85 });
+    const tailL = PB().M(cx - s * 0.02, shoulderY - s * 0.02).Q(cx - s * 0.06, shoulderY + s * 0.06, cx - s * 0.075, shoulderY + s * 0.115)
+      .L(cx - s * 0.025, shoulderY + s * 0.1).Q(cx - s * 0.01, shoulderY + s * 0.04, cx + s * 0.005, shoulderY - s * 0.01).pts;
+    const tailR = PB().M(cx + s * 0.02, shoulderY - s * 0.02).Q(cx + s * 0.045, shoulderY + s * 0.05, cx + s * 0.06, shoulderY + s * 0.1)
+      .L(cx + s * 0.015, shoulderY + s * 0.085).Q(cx + s * 0.005, shoulderY + s * 0.04, cx - s * 0.005, shoulderY - s * 0.01).pts;
+    k.shape(tailL, P.red, { w: 0.85 }); k.shape(tailR, P.red, { w: 0.85 });
+    k.shadow(tailR, () => 1, { angle: 75, spacing: 0.01, alpha: 0.6 });
+    k.shape(penEllipse(cx, shoulderY - s * 0.022, s * 0.032, s * 0.026), P.red, { w: 0.85 });
+
+    // the arm with the peel and a margherita
+    const bob = Math.sin(t * 2 * PI * 0.8) * s * 0.01;
+    const sh2 = [cx + s * 0.1901, shoulderY + s * 0.06], el2 = [cx + s * 0.2464, shoulderY + s * 0.25 + bob], hand2 = [cx + s * 0.2886, shoulderY + s * 0.13 + bob];
     {
-      const bob = Math.sin(t * 2 * Math.PI * 0.8) * s * 0.012;
-      const x = cx + s * 0.36, y = shoulderY + s * 0.2 + bob;
-      const bx = x + s * 0.12, by = y - s * 0.17;
-      const ex = x - (bx - x) * 0.45, ey = y - (by - y) * 0.45;
-      c.beginPath(); c.moveTo(bx, by); c.lineTo(ex, ey);
-      c.lineWidth = s * 0.036 + lw * 2; c.stroke();
-      c.strokeStyle = P.wood; c.lineWidth = s * 0.036; c.stroke();
-      c.strokeStyle = P.outline; c.lineWidth = lw;
-      oval(bx - s * 0.17, by - s * 0.07, bx + s * 0.17, by + s * 0.07); shape(P.wood);
-      oval(bx - s * 0.14, by - s * 0.055, bx + s * 0.14, by + s * 0.045); c.fillStyle = P.crust; c.fill();
-      oval(bx - s * 0.115, by - s * 0.04, bx + s * 0.115, by + s * 0.03); c.fillStyle = P.sauce; c.fill();
-      c.fillStyle = P.cheese;
-      for (const [dx, dy] of [[-0.05, -0.01], [0.04, 0], [-0.01, 0.015], [0.07, -0.02]]) {
-        oval(bx + s * (dx - 0.022), by + s * (dy - 0.012), bx + s * (dx + 0.022), by + s * (dy + 0.012)); c.fill();
+      const [hx, hy] = hand2, bx = hx + s * 0.07, by = hy - s * 0.21, ang = Math.atan2(by - hy, bx - hx);
+      const ex = hx - Math.cos(ang) * s * 0.07, ey = hy - Math.sin(ang) * s * 0.07;
+      k.shape(penLimb([ex, ey], [(ex + bx) / 2, (ey + by) / 2], [bx - Math.cos(ang) * s * 0.1, by - Math.sin(ang) * s * 0.1], s * 0.026, s * 0.03).outline, P.wood, { w: 0.8 });
+      const blade = PB().M(bx - s * 0.16, by + s * 0.02)
+        .C(bx - s * 0.18, by - s * 0.06, bx - s * 0.1, by - s * 0.085, bx, by - s * 0.085)
+        .C(bx + s * 0.1, by - s * 0.085, bx + s * 0.18, by - s * 0.06, bx + s * 0.16, by + s * 0.02)
+        .C(bx + s * 0.14, by + s * 0.07, bx + s * 0.06, by + s * 0.06, bx + s * 0.02, by + s * 0.075)
+        .L(bx - s * 0.02, by + s * 0.075)
+        .C(bx - s * 0.06, by + s * 0.06, bx - s * 0.14, by + s * 0.07, bx - s * 0.16, by + s * 0.02).pts;
+      k.shape(blade, P.wood);
+      k.shadow(blade, (x, y) => (y - (by + s * 0.03)) / (s * 0.015), { angle: 15, spacing: 0.01 });
+      k.shape(penEllipse(bx, by - s * 0.012, s * 0.135, s * 0.06, rad(-3)), P.crust, { w: 0.8 });
+      for (const [dx, dy] of [[-0.11, -0.03], [-0.04, -0.062], [0.06, -0.06], [0.12, -0.02], [0.08, 0.035], [-0.09, 0.03]]) {
+        k.stroke(penEllipse(bx + s * dx, by - s * 0.012 + s * dy * 0.8, s * 0.008, s * 0.004), { w: 0.4, alpha: 0.7 });
       }
-      oval(bx, by - s * 0.03, bx + s * 0.035, by - s * 0.015); c.fillStyle = P.basil; c.fill();
-      circle(x, y, s * 0.045); shape(P.skin);
+      k.fill(penEllipse(bx, by - s * 0.014, s * 0.11, s * 0.045, rad(-3)), P.sauce);
+      for (const [dx, dy, r] of [[-0.06, -0.01, 0.024], [0.03, -0.02, 0.022], [-0.01, 0.018, 0.02], [0.07, 0.008, 0.018]]) {
+        const m = penEllipse(bx + s * dx, by - s * 0.014 + s * dy, s * r, s * r * 0.55);
+        k.fill(m, P.cheese, { exact: true }); k.stroke(m.slice(5, 40), { w: 0.35, alpha: 0.5 });
+      }
+      for (const [dx, dy, a] of [[-0.025, -0.022, -20], [0.05, 0.015, 30], [-0.075, 0.016, 10]]) {
+        const leaf = penEllipse(bx + s * dx, by - s * 0.014 + s * dy, s * 0.016, s * 0.008, rad(a));
+        k.fill(leaf, P.basil, { exact: true }); k.stroke(leaf, { w: 0.35, alpha: 0.6 });
+      }
+    }
+    const arm2 = penLimb(sh2, [el2[0] - s * 0.01, el2[1] - s * 0.06], el2, s * 0.09, s * 0.078);
+    const fore2 = penLimb(el2, [(el2[0] + hand2[0]) / 2 + s * 0.01, (el2[1] + hand2[1]) / 2 + s * 0.01], [hand2[0] - s * 0.012, hand2[1] + s * 0.03], s * 0.078, s * 0.068);
+    k.shape(arm2.outline, P.white); k.shadow(arm2.outline, (x) => (x - (sh2[0] + s * 0.06)) / (s * 0.02));
+    k.shape(fore2.outline, P.white); k.shadow(fore2.outline, (x, y) => (y - (el2[1] - s * 0.04)) / (s * 0.02));
+    k.stroke(PB().M(...fore2.end[0]).Q((fore2.end[0][0] + fore2.end[1][0]) / 2 + s * 0.008, (fore2.end[0][1] + fore2.end[1][1]) / 2, ...fore2.end[1]).pts, { w: 0.8 });
+    k.shape(penEllipse(hand2[0], hand2[1], s * 0.042, s * 0.036, rad(-30)), P.skin);
+    for (let i = 0; i < 3; i++) {
+      const dx = i * s * 0.014, dy = i * s * 0.008;
+      k.stroke(PB().M(hand2[0] - s * 0.022 + dx, hand2[1] - s * 0.03 + dy).Q(hand2[0] - s * 0.005 + dx, hand2[1] - s * 0.012 + dy, hand2[0] - s * 0.012 + dx, hand2[1] + s * 0.004 + dy).pts, { w: 0.45 });
     }
 
-    // head: neck, face, closed happy eyes, cheeks, smile, moustache
-    circle(cx, headCy + s * 0.13, s * 0.06); c.fillStyle = P.skin; c.fill();
-    circle(cx, headCy, headR); shape(P.skin);
-    c.lineWidth = s * 0.014;
-    const arc = (l, tp, rt, bt, from, sweep) => {
-      c.beginPath();
-      c.ellipse((l + rt) / 2, (tp + bt) / 2, (rt - l) / 2, (bt - tp) / 2, 0, rad(from), rad(from + sweep));
-      c.stroke();
-    };
-    arc(cx - s * 0.095, headCy - s * 0.05, cx - s * 0.035, headCy, 200, 140);
-    arc(cx + s * 0.035, headCy - s * 0.05, cx + s * 0.095, headCy, 200, 140);
-    c.fillStyle = P.cheek;
-    circle(cx - s * 0.1, headCy + s * 0.04, s * 0.03); c.fill();
-    circle(cx + s * 0.1, headCy + s * 0.04, s * 0.03); c.fill();
-    arc(cx - s * 0.06, headCy + s * 0.02, cx + s * 0.06, headCy + s * 0.11, 20, 140);
-    c.lineWidth = lw;
-    c.beginPath();
-    c.moveTo(cx, headCy + s * 0.035);
-    c.bezierCurveTo(cx - s * 0.04, headCy, cx - s * 0.1, headCy + s * 0.03, cx - s * 0.11, headCy);
-    c.bezierCurveTo(cx - s * 0.1, headCy + s * 0.07, cx - s * 0.03, headCy + s * 0.07, cx, headCy + s * 0.05);
-    c.bezierCurveTo(cx + s * 0.03, headCy + s * 0.07, cx + s * 0.1, headCy + s * 0.07, cx + s * 0.11, headCy);
-    c.bezierCurveTo(cx + s * 0.1, headCy + s * 0.03, cx + s * 0.04, headCy, cx, headCy + s * 0.035);
-    c.closePath();
-    c.fillStyle = P.tache; c.fill();
-
-    // chef's hat: three puffs (only their outer edge inked) and a band
-    const bandTop = headCy - headR * 0.95;
-    c.beginPath();
-    for (const [x, y, r] of [[cx - s * 0.085, bandTop - s * 0.07, s * 0.085], [cx + s * 0.085, bandTop - s * 0.07, s * 0.085], [cx, bandTop - s * 0.12, s * 0.1]]) {
-      c.moveTo(x + r, y);
-      c.arc(x, y, r, 0, Math.PI * 2);
+    // head and toque, a little smaller than the body so the figure reads tall
+    c.save();
+    c.translate(cx, headCy); c.scale(HS, HS); c.translate(-cx, -headCy);
+    const kh = penKit(c, s / HS, 41, P.ink);
+    const head = [];
+    for (let i = 0; i <= 90; i++) {
+      const a = PI / 2 + (i / 90) * PI * 2, dy = Math.sin(a), r = hrx * (dy > 0 ? 1 - 0.18 * dy * dy : 1);
+      head.push([cx + Math.cos(a) * r, headCy + dy * hry]);
     }
-    c.lineWidth = lw * 2; c.stroke();
-    c.fillStyle = P.white; c.fill();
-    c.lineWidth = lw;
-    roundRect(c, cx - s * 0.13, bandTop - s * 0.035, s * 0.26, s * 0.07, s * 0.02);
-    shape(P.white);
+    kh.shape(head, P.skin);
+    // closed happy eyes, brows, cheeks, nose, moustache, smile
+    for (const sg of [-1, 1]) {
+      kh.stroke(PB().M(cx + sg * s * 0.075, headCy - s * 0.035).Q(cx + sg * s * 0.05, headCy - s * 0.058, cx + sg * s * 0.025, headCy - s * 0.035).pts, { w: 1.1 });
+      kh.stroke(PB().M(cx + sg * s * 0.085, headCy - s * 0.075).Q(cx + sg * s * 0.055, headCy - s * 0.09, cx + sg * s * 0.02, headCy - s * 0.08).pts, { w: 1.2 });
+      c.fillStyle = P.cheek; c.beginPath(); c.ellipse(cx + sg * s * 0.075, headCy + s * 0.012, s * 0.025, s * 0.016, 0, 0, PI * 2); c.fill();
+    }
+    kh.stroke(PB().M(cx - s * 0.005, headCy - s * 0.03).Q(cx - s * 0.02, headCy + s * 0.012, cx + s * 0.01, headCy + s * 0.018).pts, { w: 0.8 });
+    kh.shape(PB().M(cx, headCy + s * 0.03)
+      .C(cx - s * 0.03, headCy + s * 0.012, cx - s * 0.085, headCy + s * 0.02, cx - s * 0.1, headCy)
+      .C(cx - s * 0.095, headCy + s * 0.06, cx - s * 0.03, headCy + s * 0.06, cx, headCy + s * 0.045)
+      .C(cx + s * 0.03, headCy + s * 0.06, cx + s * 0.095, headCy + s * 0.06, cx + s * 0.1, headCy)
+      .C(cx + s * 0.085, headCy + s * 0.02, cx + s * 0.03, headCy + s * 0.012, cx, headCy + s * 0.03).pts, P.tache, { w: 0.7 });
+    kh.stroke(PB().M(cx - s * 0.035, headCy + s * 0.075).Q(cx, headCy + s * 0.095, cx + s * 0.035, headCy + s * 0.075).pts, { w: 0.9 });
+    // toque: band on the forehead, a tall pleated puff above
+    const bandB = headCy - hry * 0.58, bandT = bandB - s * 0.065;
+    const puff = PB().M(cx - s * 0.135, bandT + s * 0.005)
+      .C(cx - s * 0.1462, bandT - s * 0.06, cx - s * 0.2021, bandT - s * 0.1, cx - s * 0.172, bandT - s * 0.17)
+      .C(cx - s * 0.172, bandT - s * 0.235, cx - s * 0.12, bandT - s * 0.25, cx - s * 0.08, bandT - s * 0.225)
+      .C(cx - s * 0.05, bandT - s * 0.285, cx + s * 0.05, bandT - s * 0.29, cx + s * 0.075, bandT - s * 0.23)
+      .C(cx + s * 0.13, bandT - s * 0.255, cx + s * 0.1849, bandT - s * 0.22, cx + s * 0.172, bandT - s * 0.15)
+      .C(cx + s * 0.2021, bandT - s * 0.095, cx + s * 0.1462, bandT - s * 0.05, cx + s * 0.135, bandT + s * 0.005).pts;
+    kh.fill(puff, P.white);
+    kh.shadow(puff, (x, y) => (x - (cx + s * 0.07)) / (s * 0.025) + (y - (bandT - s * 0.2)) / (s * 0.08), { angle: 60 });
+    kh.stroke(puff);
+    for (const [x0, x1, h] of [[-0.075, -0.1, 0.16], [-0.02, -0.025, 0.2], [0.035, 0.05, 0.19], [0.09, 0.12, 0.14]]) {
+      kh.stroke(PB().M(cx + s * x0, bandT - s * 0.005).Q(cx + s * (x0 + x1) / 2 - s * 0.01, bandT - s * h * 0.5, cx + s * x1, bandT - s * h).pts, { w: 0.5, alpha: 0.75 });
+    }
+    const band = PB().M(cx - s * 0.142, bandB).Q(cx, bandB + s * 0.03, cx + s * 0.142, bandB)
+      .L(cx + s * 0.137, bandT).Q(cx, bandT + s * 0.025, cx - s * 0.137, bandT).pts;
+    kh.shape(band, P.white);
+    kh.shadow(band, (x) => (x - (cx + s * 0.07)) / (s * 0.02), { angle: 70 });
     c.restore();
+    c.restore();
+  }
+
+  // ---- the pen: sampled paths, a jittery double line, fills off the line, hatching ----
+
+  /** Path builder that samples lines and curves into points. */
+  function PB() {
+    const pts = []; let x = 0, y = 0;
+    const api = {
+      M(a, b) { x = a; y = b; pts.push([x, y]); return api; },
+      L(a, b) { for (let i = 1; i <= 12; i++) pts.push([x + (a - x) * i / 12, y + (b - y) * i / 12]); x = a; y = b; return api; },
+      Q(qx, qy, a, b) { for (let i = 1; i <= 20; i++) { const t = i / 20, u = 1 - t; pts.push([u * u * x + 2 * u * t * qx + t * t * a, u * u * y + 2 * u * t * qy + t * t * b]); } x = a; y = b; return api; },
+      C(c1x, c1y, c2x, c2y, a, b) {
+        for (let i = 1; i <= 24; i++) {
+          const t = i / 24, u = 1 - t;
+          pts.push([u * u * u * x + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * a, u * u * u * y + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * b]);
+        }
+        x = a; y = b; return api;
+      },
+      pts,
+    };
+    return api;
+  }
+
+  function penEllipse(cx, cy, rx, ry, rot = 0) {
+    const out = [], cr = Math.cos(rot), sr = Math.sin(rot);
+    for (let i = 0; i <= 80; i++) { const a = (i / 80) * Math.PI * 2, x = Math.cos(a) * rx, y = Math.sin(a) * ry; out.push([cx + x * cr - y * sr, cy + x * sr + y * cr]); }
+    return out;
+  }
+
+  /** A sleeve: a closed outline around a curved centre line, tapering from w0 to w1. */
+  function penLimb(a, m, b, w0, w1) {
+    const L = [], R = [];
+    for (let i = 0; i <= 24; i++) {
+      const t = i / 24, u = 1 - t;
+      const x = u * u * a[0] + 2 * u * t * m[0] + t * t * b[0], y = u * u * a[1] + 2 * u * t * m[1] + t * t * b[1];
+      const dx = 2 * u * (m[0] - a[0]) + 2 * t * (b[0] - m[0]), dy = 2 * u * (m[1] - a[1]) + 2 * t * (b[1] - m[1]);
+      const d = Math.hypot(dx, dy) || 1, w = (w0 + (w1 - w0) * t) / 2;
+      L.push([x - dy / d * w, y + dx / d * w]); R.push([x + dy / d * w, y - dx / d * w]);
+    }
+    return { outline: L.concat(R.slice().reverse()), end: [L[24], R[0]] };
+  }
+
+  const PEN_NOISE = (() => { let x = 7; return Array.from({ length: 256 }, () => { x = (x * 1103515245 + 12345) % 2147483648; return (x / 2147483647) * 2 - 1; }); })();
+  function penNoise(seed, x) {
+    const i = Math.floor(x), f = x - i, o = seed * 53;
+    const a = PEN_NOISE[(i + o) & 255], b = PEN_NOISE[(i + 1 + o) & 255], u = (1 - Math.cos(f * Math.PI)) / 2;
+    return a + (b - a) * u;
+  }
+
+  /** How the pen draws at figure size s: each line twice, the second a little off and lighter. */
+  function penKit(c, s, seed, ink) {
+    const LINE = 0.0105, JIT = 0.0032, OFF = [0.006, 0.004];
+    const poly = (pts) => { c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]); c.closePath(); };
+    function stroke(pts, o = {}) {
+      const w = (o.w || 1) * LINE * s, passes = o.passes || 2;
+      for (let p = 0; p < passes; p++) {
+        const nz = seed++ * 7 + p * 131;
+        const shiftX = p ? penNoise(nz, 3.3) * 0.6 * JIT * s : 0, shiftY = p ? penNoise(nz, 7.7) * 0.6 * JIT * s : 0;
+        let len = 0;
+        c.beginPath();
+        for (let i = 0; i < pts.length; i++) {
+          if (i) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+          const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+          const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 1;
+          const off = penNoise(nz, len / (s * 0.07)) * JIT * s;
+          const x = pts[i][0] - dy / d * off + shiftX, y = pts[i][1] + dx / d * off + shiftY;
+          if (i) c.lineTo(x, y); else c.moveTo(x, y);
+        }
+        c.strokeStyle = ink;
+        c.globalAlpha = (o.alpha ?? 1) * (p ? 0.7 : 1);
+        c.lineWidth = w * (p ? 0.65 : 1);
+        c.lineCap = 'round'; c.lineJoin = 'round';
+        c.stroke();
+      }
+      c.globalAlpha = 1;
+    }
+    function fill(pts, col, o = {}) {
+      c.save();
+      if (!o.exact) c.translate(OFF[0] * s, OFF[1] * s);
+      poly(pts); c.fillStyle = col; c.fill();
+      c.restore();
+    }
+    function shape(pts, col, o = {}) { fill(pts, col, o); stroke(pts, o); }
+    /** Hatching inside pts where side(x, y) > 0. */
+    function shadow(pts, side, o = {}) {
+      c.save(); poly(pts); c.clip();
+      let r = seed++ * 3 + 1;
+      const rnd = () => { r = (r * 1103515245 + 12345) % 2147483648; return r / 2147483647; };
+      const ang = ((o.angle ?? 62) * Math.PI) / 180, sp = s * (o.spacing ?? 0.014), step = s * 0.004;
+      const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      const diag = Math.hypot(x1 - x0, y1 - y0), mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+      const ux = Math.cos(ang), uy = Math.sin(ang), nx = -uy, ny = ux;
+      for (let k = -diag; k <= diag; k += sp) {
+        let run = null;
+        for (let d = -diag; d <= diag + step; d += step) {
+          const x = mx + nx * k + ux * d, y = my + ny * k + uy * d;
+          const on = d <= diag && side(x, y) > (rnd() - 0.5) * 0.06;
+          if (on && !run) run = [[x, y]];
+          else if (on) run[1] = [x, y];
+          else if (run) {
+            if (run[1]) {
+              const [a, b] = run;
+              stroke([a, [(a[0] + b[0]) / 2 + (rnd() - 0.5) * s * 0.003, (a[1] + b[1]) / 2], b], { w: 0.5, passes: 1, alpha: o.alpha ?? 0.7 });
+            }
+            run = null;
+          }
+        }
+      }
+      c.restore();
+    }
+    return { stroke, fill, shape, shadow };
   }
 
   // ---------------- sound: the whoosh and the thud of the seal ----------------

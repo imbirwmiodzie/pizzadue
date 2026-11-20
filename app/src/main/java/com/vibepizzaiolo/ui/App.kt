@@ -60,8 +60,9 @@ fun App(vm: MainViewModel) {
     val share by vm.share.collectAsStateWithLifecycle()
     val bakeLog by vm.bakeLog.collectAsStateWithLifecycle()
     val video by vm.video.collectAsStateWithLifecycle()
-    val avatar by vm.avatar.collectAsStateWithLifecycle()
+    val avatarIcon by vm.avatarIcon.collectAsStateWithLifecycle()
     val avatarBusy by vm.avatarBusy.collectAsStateWithLifecycle()
+    val avatarNote by vm.avatarNote.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val community: CommunityViewModel = viewModel()
     val party: PartyViewModel = viewModel()
@@ -115,7 +116,7 @@ fun App(vm: MainViewModel) {
         }
     }
 
-    // ---- your selfie, made into a cartoon ----
+    // ---- your selfie, drawn as the pizzaiolo ----
     var selfieUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     val takeSelfie = rememberLauncherForActivityResult(TakeSelfie()) { ok ->
         val uri = selfieUri
@@ -255,18 +256,18 @@ fun App(vm: MainViewModel) {
                                 share = { askSource = true },
                             ),
                             justBaked = justBaked,
-                            avatar = avatar,
+                            avatar = avatarIcon,
                         )
                     }
                 }
                 AppTab.DOUGH -> DoughScreen(settings, voice, vm::updateSettings) { vm.selectTab(AppTab.SETTINGS) }
                 AppTab.PARTY -> PartyScreen(party, settings) { vm.selectTab(AppTab.TIMER) }
-                AppTab.COMMUNITY -> CommunityScreen(community, avatar)
+                AppTab.COMMUNITY -> CommunityScreen(community, avatarIcon)
                 AppTab.SETTINGS -> SettingsScreen(
                     settings, voice, vm::updateSettings, vm::preview, vm::previewVolume,
-                    avatar = AvatarActions(avatar, avatarBusy, ::selfie, {
+                    avatar = AvatarActions(avatarIcon, avatarBusy, ::selfie, {
                         pickSelfie.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    }, vm::removeAvatar),
+                    }, vm::removeAvatar, avatarNote),
                 )
             }
         }

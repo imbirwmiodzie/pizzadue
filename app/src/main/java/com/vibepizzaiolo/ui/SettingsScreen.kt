@@ -138,13 +138,15 @@ fun SettingsScreen(
     }
 }
 
-/** Your cartoon portrait and what you can do with it. */
+/** You as the pizzaiolo, and what you can do with it. */
 class AvatarActions(
     val picture: Bitmap?,
     val busy: Boolean,
     val takeSelfie: () -> Unit,
     val pickPhoto: () -> Unit,
     val remove: () -> Unit,
+    /** What went wrong with the last photo, if anything. */
+    val note: String? = null,
 )
 
 @Composable
@@ -153,16 +155,17 @@ private fun AvatarRow(a: AvatarActions) {
         Box(Modifier.size(84.dp).clip(CircleShape).background(Pal.raised), contentAlignment = Alignment.Center) {
             when {
                 a.busy -> CircularProgressIndicator(color = Pal.flame, modifier = Modifier.size(32.dp))
-                a.picture != null -> Image(a.picture.asImageBitmap(), "Your cartoon portrait", Modifier.size(84.dp))
+                a.picture != null -> Image(a.picture.asImageBitmap(), "You as the pizzaiolo", Modifier.size(84.dp))
                 else -> Icon(Icons.Default.Face, null, tint = Pal.muted, modifier = Modifier.size(44.dp))
             }
         }
         Column(Modifier.padding(start = 14.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                if (a.picture == null) "Take a selfie: the app draws you as a cartoon. You become the pizzaiolo at the end of your reels."
+                if (a.picture == null) "Take a selfie: the app draws your face in pen and ink. You become the pizzaiolo at the end of your reels."
                 else "This is you as the pizzaiolo: your icon and the chef at the end of your reels.",
                 fontSize = 13.sp, color = Pal.muted,
             )
+            if (a.note != null && !a.busy) Text(a.note, fontSize = 13.sp, color = Pal.flame)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedButton(onClick = a.takeSelfie, enabled = !a.busy, contentPadding = PaddingValues(horizontal = 10.dp)) { Text("Selfie", color = Pal.flame) }
                 OutlinedButton(onClick = a.pickPhoto, enabled = !a.busy, contentPadding = PaddingValues(horizontal = 10.dp)) { Text("Gallery", color = Pal.fg) }

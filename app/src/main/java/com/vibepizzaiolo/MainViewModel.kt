@@ -27,7 +27,9 @@ import com.vibepizzaiolo.share.Design
 import com.vibepizzaiolo.share.Format
 import com.vibepizzaiolo.share.ShareUtils
 import com.vibepizzaiolo.avatar.AvatarStore
-import com.vibepizzaiolo.avatar.Cartoonizer
+import com.vibepizzaiolo.avatar.FaceModels
+import com.vibepizzaiolo.avatar.FaceSketch
+import com.vibepizzaiolo.avatar.Pizzaiolo
 import com.vibepizzaiolo.video.VideoMaker
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -85,11 +87,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _video = MutableStateFlow<VideoUi?>(null)
     val video: StateFlow<VideoUi?> = _video.asStateFlow()
 
-    /** Your cartoon portrait: your icon, and your face on the pizzaiolo at the end of the reel. */
+    /** Your face drawn in pen and ink: on the pizzaiolo at the end of the reel. */
     private val _avatar = MutableStateFlow<Bitmap?>(null)
     val avatar: StateFlow<Bitmap?> = _avatar.asStateFlow()
+
+    /** Your icon: your head in the toque, cut from the drawing. */
+    val avatarIcon: StateFlow<Bitmap?> = _avatar
+        .map { face -> face?.let { withContext(Dispatchers.Default) { Pizzaiolo.icon(it, 256) } } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val _avatarBusy = MutableStateFlow(false)
     val avatarBusy: StateFlow<Boolean> = _avatarBusy.asStateFlow()
+
+    /** Said under the portrait when the last photo did not work out as hoped. */
+    private val _avatarNote = MutableStateFlow<String?>(null)
+    val avatarNote: StateFlow<String?> = _avatarNote.asStateFlow()
 
     init {
         // the idle timer always shows the current bake / preheat time from Settings
@@ -225,17 +236,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ---- your cartoon portrait ----
+    // ---- your face on the pizzaiolo ----
     fun makeAvatar(photo: Uri) {
         _avatarBusy.value = true
         viewModelScope.launch {
             val app = getApplication<Application>()
-            val cartoon = withContext(Dispatchers.Default) {
-                ShareUtils.loadPhoto(app, photo, maxSide = 1400)?.let { Cartoonizer.cartoon(it) }
+            val drawn = withContext(Dispatchers.Default) {
+                ShareUtils.loadPhoto(app, photo, maxSide = 1400)?.let { selfie ->
+                    val models = FaceModels.open(app)
+                    try { FaceSketch.sketch(selfie, models) } finally { models?.close() }
+                }
             }
-            if (cartoon != null) {
-                withContext(Dispatchers.IO) { AvatarStore.save(app, cartoon) }
-                _avatar.value = cartoon
+            if (drawn != null) {
+                withContext(Dispatchers.IO) { AvatarStore.save(app, drawn.crop, drawn.face) }
+                _avatar.value = drawn.face
+                _avatarNote.value = if (drawn.faceFound) null
+                else "No face found in that photo, so this is a guess. Try one looking at the camera, in good light."
+            } else {
+                _avatarNote.value = "That photo didn't open. Try another one."
             }
             _avatarBusy.value = false
         }
@@ -244,6 +262,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun removeAvatar() {
         AvatarStore.delete(getApplication())
         _avatar.value = null
+        _avatarNote.value = null
     }
 
     // ---- voice: start and stop only ----
