@@ -288,7 +288,7 @@ class PartyTest {
         assertTrue(page.bodyAsText().contains("/party/app.js"))
         assertEquals("default-src 'self'; frame-ancestors 'none'", page.headers["Content-Security-Policy"])
         assertTrue(page.headers["Content-Type"]!!.startsWith("text/html"))
-        for (file in listOf("app.js", "app.css", "icon.svg")) assertEquals(HttpStatusCode.OK, client.get("/party/$file").status, file)
+        for (file in listOf("app.js", "pizza.js", "app.css", "icon.svg")) assertEquals(HttpStatusCode.OK, client.get("/party/$file").status, file)
         assertEquals(HttpStatusCode.NotFound, client.get("/party/../logback.xml").status)
         assertEquals(HttpStatusCode.NotFound, client.get("/party/index.html").status)
     }

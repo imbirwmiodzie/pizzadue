@@ -174,6 +174,7 @@ object PartyRules {
         MenuPizza(name = "Prosciutto e funghi", note = "ham and mushrooms"),
         MenuPizza(name = "Quattro formaggi", note = "four cheeses, no tomato"),
         MenuPizza(name = "Ortolana", note = "grilled vegetables"),
+        MenuPizza(name = "Tonno e cipolla", note = "tomato, mozzarella, tuna, red onion"),
         MenuPizza(name = "Nutella", note = "the dessert pizza"),
     )
 

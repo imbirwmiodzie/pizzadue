@@ -23,12 +23,13 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.routing
 
-/** The guests' page: three small files from the jar. The page itself is the same for every night. */
+/** The guests' page: a few small files from the jar. The page itself is the same for every night. */
 private object GuestPage {
     private fun load(name: String) = GuestPage::class.java.getResourceAsStream("/party/$name")!!.use { it.readBytes() }
     val html = load("index.html")
     val files = mapOf(
         "app.js" to (ContentType.Text.JavaScript to load("app.js")),
+        "pizza.js" to (ContentType.Text.JavaScript to load("pizza.js")),
         "app.css" to (ContentType.Text.CSS to load("app.css")),
         "icon.svg" to (ContentType.Image.SVG to load("icon.svg")),
     )
