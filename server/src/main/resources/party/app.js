@@ -17,6 +17,9 @@
     closed: 'Zamówienia są już zamknięte. Daj znać pizzaiolo.', taken: 'To imię już jest na liście. Jeśli to Ty, wybierz je poniżej; jeśli nie, dopisz literę.',
     offline: 'Brak połączenia. Spróbuję ponownie.', oops: 'Coś poszło nie tak. Spróbuj jeszcze raz.', pizzaiolo: 'pizzaiolo',
     count: n => n === 0 ? 'Jeszcze nic nie wybrano' : n === 1 ? 'Zamawiasz 1 pizzę' : n < 5 ? 'Zamawiasz ' + n + ' pizze' : 'Zamawiasz ' + n + ' pizz',
+    tonight: 'Dzisiejsze menu', search: 'Szukaj pizzy lub składnika', byIngredient: 'Składniki',
+    found: (n, all) => 'Pasuje: ' + n + ' z ' + all, noMatch: q => 'Żadna pizza nie pasuje do „' + q + '”.', showAll: 'Pokaż wszystkie',
+    prev: 'Poprzednia pizza', next: 'Następna pizza', goTo: 'Pokaż',
   } : {
     by: 'hosted by', yourName: 'Your name', join: 'Count me in', already: 'Been here before? Tap your name',
     hello: 'Ciao', notYou: 'not me', menu: 'Your pizza', bring: 'Who brings what', table: 'At the table',
@@ -29,7 +32,13 @@
     closed: 'Orders are closed. Ask the pizzaiolo.', taken: 'That name is already on the list. If it is you, tap it below; if not, add a letter.',
     offline: 'No connection. Trying again.', oops: 'Something went wrong. Try again.', pizzaiolo: 'pizzaiolo',
     count: n => n === 0 ? 'Nothing picked yet' : n === 1 ? 'You ordered 1 pizza' : 'You ordered ' + n + ' pizzas',
+    tonight: "Tonight's menu", search: 'Search a pizza or an ingredient', byIngredient: 'Ingredients',
+    found: (n, all) => n + ' of ' + all + ' pizzas', noMatch: q => 'No pizza matches “' + q + '”.', showAll: 'Show all',
+    prev: 'Previous pizza', next: 'Next pizza', goTo: 'Show',
   };
+  const LANG = polish ? 'pl' : 'en';
+  const P = window.VPPizza;
+  const still = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const MAX_PER_GUEST = 6;
   document.documentElement.lang = polish ? 'pl' : 'en';
 
@@ -51,6 +60,12 @@
   let saveTimer = 0;
   let saving = false;
   let savedAt = 0;
+  // the menu: what the guest searched, which pizzas already had their toppings fall, the last counts drawn
+  let query = '';
+  const seen = new Set();
+  let drawnCounts = null;
+  let scrolledAt = 0;
+  let lastView = '';
 
   async function api(method, path, body) {
     const headers = { Accept: 'application/json' };
@@ -73,6 +88,7 @@
 
   // the server leaves out what is empty or zero: fill it in once, here
   function whole(p) {
+    lastView = '';
     p.stage = p.stage || 'ORDERS';
     p.whenText = p.whenText || ''; p.note = p.note || '';
     p.spareBaked = p.spareBaked || 0;
@@ -94,7 +110,10 @@
   async function refresh() {
     try {
       const view = await api('GET', '');
+      const sig = JSON.stringify(view);
+      if (sig === lastView && party && !gone && !error) return;
       party = whole(view.party);
+      lastView = sig;
       gone = false;
       // the server no longer knows this browser's key: taken off the list, or the name was picked on another phone
       if (ident && view.me !== ident.guestId) forget();
@@ -102,8 +121,14 @@
     } catch (e) {
       if (e.status === 404) { gone = true; party = null; } else if (!party) error = e.message; else if (e.status === 0) error = T.offline;
     }
-    // somebody typing their name keeps the keyboard
-    if (!(document.activeElement && document.activeElement.tagName === 'INPUT')) render();
+    redraw();
+  }
+
+  // somebody typing keeps the keyboard, somebody swiping the menu keeps the pizza under their finger
+  function redraw() {
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    if (Date.now() - scrolledAt < 700) { setTimeout(redraw, 400); return; }
+    render();
   }
 
   const me = () => (party && ident ? party.guests.find(g => g.id === ident.guestId) : null) || null;
@@ -221,6 +246,7 @@
       others.length > 0 && h('section', null,
         h('h2', null, T.already),
         h('div', { class: 'chips' }, others.map(g => h('button', { class: 'chip', type: 'button', onclick: () => claim(g.id) }, g.name)))),
+      party.menu.length > 0 && h('section', null, h('h2', null, T.tonight), menuBlock(null, 0)),
       tableSection(),
     ];
   }
@@ -248,16 +274,9 @@
       error && h('p', { class: 'error', role: 'alert' }, error),
       h('section', null,
         h('h2', null, T.menu),
-        h('div', { class: 'group' }, party.menu.map(p => {
-          const n = counts[p.id] || 0;
-          return h('div', { class: 'row' + (n > 0 ? ' mine' : '') },
-            h('div', { class: 'text' }, h('div', { class: 'name' }, p.name), p.note && h('div', { class: 'sub' }, p.note)),
-            h('div', { class: 'stepper' },
-              h('button', { type: 'button', 'aria-label': '−1 ' + p.name, disabled: n === 0, onclick: () => change(p.id, -1) }, '−'),
-              h('span', { class: 'n' + (n > 0 ? ' on' : ''), 'aria-live': 'polite' }, n),
-              h('button', { type: 'button', 'aria-label': '+1 ' + p.name, disabled: total >= MAX_PER_GUEST, onclick: () => change(p.id, 1) }, '+')));
-        })),
-        h('p', { class: 'status' + (status === T.saved ? ' ok' : ''), role: 'status' }, total === 0 && !draft && !saving ? T.pick : status)),
+        menuBlock(counts, total),
+        h('p', { class: 'status' + (status === T.saved ? ' ok' : ''), role: 'status' }, total === 0 && !draft && !saving ? T.pick : status),
+        picked(counts)),
       party.bring.length > 0 && h('section', null,
         h('h2', null, T.bring),
         h('div', { class: 'group' }, party.bring.map(item => {
@@ -281,7 +300,18 @@
       h('div', { class: 'big flame', 'aria-hidden': 'true' }, '🔥'),
       h('h1', null, T.bakingTitle),
       h('p', null, T.baking),
-      mine && h('div', { class: 'yours' }, T.yours + ': ' + mine))];
+      mine && h('div', { class: 'yours' }, T.yours + ': ' + mine),
+      g && minis(g))];
+  }
+
+  function minis(g) {
+    const mine = g.orders.filter(o => o.count > 0);
+    if (mine.length === 0) return null;
+    return h('div', { class: 'minis', 'aria-hidden': 'true' }, mine.map(o => {
+      const p = party.menu.find(m => m.id === o.pizzaId);
+      if (!p) return null;
+      return h('div', { class: 'mini' }, h('div', { class: 'spin' }, P.paint(P.analyze(p, LANG), P.seedOf(p.id + p.name))), o.count > 1 ? '×' + o.count : '');
+    }));
   }
 
   function doneView() {
@@ -293,8 +323,175 @@
       h('div', { class: 'yours' }, party.title + ' · ' + T.baked(baked)))];
   }
 
+  // ---- the menu: a row of pizzas to swipe through, drawn from their ingredients ----
+  const matches = (search, words) => words.every(w => search.includes(w));
+  const words = () => P.fold(query).trim().split(/\s+/).filter(Boolean);
+
+  function card(p, counts, total) {
+    const info = P.analyze(p, LANG);
+    const n = counts ? counts[p.id] || 0 : 0;
+    const svg = P.paint(info, P.seedOf(p.id + p.name));
+    // toppings fall the first time a pizza comes into view, never again on a redraw
+    if (!seen.has(p.id) && !still() && 'IntersectionObserver' in window) svg.classList.add('waiting');
+    const spin = h('div', { class: 'spin' }, svg);
+    spin.style.animationDelay = '-' + ((Date.now() / 1000) % 120).toFixed(2) + 's';
+    const popped = counts && drawnCounts && (drawnCounts[p.id] || 0) !== n;
+    const q = words();
+    return h('article', { class: 'card' + (n > 0 ? ' mine' : ''), 'data-id': p.id, 'data-search': info.search, 'aria-label': p.name, hidden: !matches(info.search, q) },
+      h('div', { class: 'art' },
+        h('div', { class: 'roll' }, spin),
+        h('div', { class: 'steam', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')),
+        n > 0 && h('span', { class: 'badge' + (popped ? ' pop' : '') }, '×' + n)),
+      h('h3', null, p.name),
+      info.chips.length > 0 && h('ul', { class: 'ings', 'aria-label': T.byIngredient },
+        info.chips.map(c => h('li', { class: 'ing' + (c.neg ? ' neg' : ''), 'data-s': P.fold(c.text) }, P.icon(c.icon), h('span', null, c.text)))),
+      counts && h('div', { class: 'stepper' },
+        h('button', { type: 'button', 'data-key': 'minus:' + p.id, 'aria-label': '−1 ' + p.name, disabled: n === 0, onclick: () => change(p.id, -1) }, '−'),
+        h('span', { class: 'n' + (n > 0 ? ' on' : ''), 'aria-live': 'polite' }, n),
+        h('button', { type: 'button', 'data-key': 'plus:' + p.id, 'aria-label': '+1 ' + p.name, disabled: total >= MAX_PER_GUEST, onclick: () => change(p.id, 1) }, '+')));
+  }
+
+  /** The menu with its search; [counts] null shows it without steppers, before joining. */
+  function menuBlock(counts, total) {
+    const many = party.menu.length > 1;
+    const tags = new Map();
+    for (const p of party.menu) for (const t of P.analyze(p, LANG).tags) if (!tags.has(t.k)) tags.set(t.k, t);
+    const block = h('div', { class: 'menu' },
+      many && h('label', { class: 'search' }, P.glyph('search'),
+        h('input', {
+          class: 'field', type: 'search', placeholder: T.search, 'aria-label': T.search, value: query,
+          autocomplete: 'off', enterkeyhint: 'search', spellcheck: 'false',
+          oninput: e => { query = e.target.value; filter(); },
+          onkeydown: e => { if (e.key === 'Enter') e.target.blur(); else if (e.key === 'Escape') { query = ''; e.target.value = ''; filter(); } },
+        })),
+      many && tags.size > 1 && h('div', { class: 'tags', role: 'group', 'aria-label': T.byIngredient },
+        [...tags.values()].map(t => h('button', {
+          class: 'tag', type: 'button', 'data-label': t.label, 'aria-pressed': 'false',
+          onclick: () => { query = P.fold(query).trim() === P.fold(t.label) ? '' : t.label; const i = document.querySelector('.search input'); if (i) i.value = query; filter(); },
+        }, P.icon(t.icon), t.label))),
+      many && h('p', { class: 'found', 'aria-live': 'polite' }),
+      h('div', { class: 'carousel-wrap' },
+        h('div', { class: 'carousel' + (many ? '' : ' single') }, party.menu.map(p => card(p, counts, total))),
+        many && h('button', { class: 'arrow prev', type: 'button', 'aria-label': T.prev, onclick: () => step(-1) }, P.glyph('prev')),
+        many && h('button', { class: 'arrow next', type: 'button', 'aria-label': T.next, onclick: () => step(1) }, P.glyph('next'))),
+      many && h('div', { class: 'dots' }),
+      many && h('div', { class: 'no-match', hidden: true },
+        h('p', null), h('button', { class: 'link', type: 'button', onclick: () => { query = ''; const i = document.querySelector('.search input'); if (i) i.value = ''; filter(); } }, T.showAll)));
+    if (counts) drawnCounts = Object.assign({}, counts);
+    return block;
+  }
+
+  /** What this guest ordered, as chips that bring the pizza into view. */
+  function picked(counts) {
+    const mine = party.menu.filter(p => counts[p.id] > 0);
+    if (mine.length === 0) return null;
+    return h('div', { class: 'picked' }, mine.map(p => h('button', {
+      class: 'chip', type: 'button', 'aria-label': T.goTo + ' ' + p.name,
+      onclick: () => { const c = cardOf(p.id); if (c && c.hidden) { query = ''; const i = document.querySelector('.search input'); if (i) i.value = ''; filter(); } goTo(cardOf(p.id)); },
+    }, p.name + (counts[p.id] > 1 ? ' ×' + counts[p.id] : ''))));
+  }
+
+  const carousel = () => document.querySelector('.carousel');
+  const shownCards = () => { const el = carousel(); return el ? [...el.children].filter(c => !c.hidden) : []; };
+  const cardOf = id => (carousel() ? [...carousel().children] : []).find(c => c.dataset.id === id) || null;
+
+  function goTo(c) {
+    const el = carousel();
+    if (!el || !c) return;
+    el.scrollTo({ left: c.offsetLeft + c.offsetWidth / 2 - el.clientWidth / 2, behavior: still() ? 'auto' : 'smooth' });
+  }
+  function step(by) {
+    const cards = shownCards();
+    const now = cards.findIndex(c => c.classList.contains('active'));
+    goTo(cards[Math.max(0, Math.min(cards.length - 1, (now < 0 ? 0 : now) + by))]);
+  }
+
+  /** Shows the pizzas that match the search, without redrawing: the keyboard stays up. */
+  function filter() {
+    const el = carousel();
+    if (!el) return;
+    const q = words();
+    for (const c of el.children) c.hidden = !matches(c.dataset.search, q);
+    sync();
+    el.scrollLeft = 0;
+    if (el.vpUpdate) el.vpUpdate();
+  }
+
+  /** The count line, the empty state, the matching ingredients and the dots, as the search stands. */
+  function sync() {
+    const el = carousel();
+    if (!el) return;
+    const q = words();
+    const shown = shownCards().length;
+    for (const li of el.querySelectorAll('.ing')) li.classList.toggle('hit', q.length > 0 && q.some(w => li.dataset.s.includes(w)));
+    for (const b of document.querySelectorAll('.tag')) b.setAttribute('aria-pressed', String(q.length > 0 && P.fold(b.dataset.label) === q.join(' ')));
+    const found = document.querySelector('.found');
+    if (found) found.textContent = q.length ? T.found(shown, el.children.length) : '';
+    const none = document.querySelector('.no-match');
+    if (none) { none.hidden = shown > 0; none.firstChild.textContent = T.noMatch(query.trim()); }
+    el.classList.toggle('single', shown <= 1);
+    dots();
+  }
+
+  function dots() {
+    const box = document.querySelector('.dots');
+    if (!box) return;
+    const cards = shownCards();
+    box.replaceChildren(...(cards.length > 1 ? cards.map(c => h('button', { class: 'dot', type: 'button', 'aria-label': c.getAttribute('aria-label'), onclick: () => goTo(c) })) : []));
+  }
+
+  /** Cards grow toward the middle and roll as they move; toppings fall when a pizza first shows. */
+  function wire() {
+    const el = carousel();
+    if (!el) return;
+    let frame = 0;
+    const update = () => {
+      const mid = el.scrollLeft + el.clientWidth / 2;
+      const cards = shownCards();
+      const dotEls = document.querySelectorAll('.dot');
+      let best = -1, bestD = Infinity;
+      cards.forEach((c, i) => {
+        const along = (c.offsetLeft + c.offsetWidth / 2 - mid) / (c.offsetWidth || 1);
+        const d = Math.min(Math.abs(along), 1);
+        if (Math.abs(along) < bestD) { bestD = Math.abs(along); best = i; }
+        c.style.transform = cards.length > 1 ? 'scale(' + (1 - d * .1).toFixed(3) + ')' : '';
+        c.style.opacity = cards.length > 1 ? (1 - d * .4).toFixed(3) : '';
+        const roll = c.querySelector('.roll');
+        if (roll) roll.style.transform = still() ? '' : 'rotate(' + (along * 110).toFixed(1) + 'deg)';
+      });
+      cards.forEach((c, i) => c.classList.toggle('active', i === best));
+      dotEls.forEach((d, i) => d.classList.toggle('on', i === best));
+      const prev = document.querySelector('.arrow.prev'), next = document.querySelector('.arrow.next');
+      if (prev) prev.disabled = best <= 0;
+      if (next) next.disabled = best < 0 || best >= cards.length - 1;
+    };
+    el.vpUpdate = update;
+    el.addEventListener('scroll', () => {
+      scrolledAt = Date.now();
+      if (!frame) frame = requestAnimationFrame(() => { frame = 0; update(); });
+    }, { passive: true });
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(entries => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const svg = e.target.querySelector('.pizza.waiting');
+          if (svg) { svg.classList.remove('waiting'); svg.classList.add('fresh'); }
+          seen.add(e.target.dataset.id);
+          io.unobserve(e.target);
+        }
+      }, { root: el, threshold: .5 });
+      for (const c of el.children) if (c.querySelector('.pizza.waiting')) io.observe(c);
+    }
+    sync();
+    update();
+  }
+
   function render() {
     const app = document.getElementById('app');
+    // a redraw keeps the menu where it was scrolled to, and the button that had focus
+    const before = carousel();
+    const left = before ? before.scrollLeft : null;
+    const focused = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
     let kids;
     if (gone) kids = [h('div', { class: 'stage' }, h('div', { class: 'big', 'aria-hidden': 'true' }, '🫥'), h('h1', null, T.gone), h('p', null, T.goneText))];
     else if (!party) kids = error ? [h('p', { class: 'error', role: 'alert' }, error)] : [h('p', { class: 'loading' }, '🍕')];
@@ -305,6 +502,13 @@
       else kids = me() ? orderView() : joinView();
     }
     app.replaceChildren(...kids.flat().filter(k => k && k.nodeType));
+    const after = carousel();
+    if (after && left != null) after.scrollLeft = left;
+    wire();
+    if (focused) {
+      const el = app.querySelector('[data-key="' + focused + '"]');
+      if (el && !el.disabled) el.focus({ preventScroll: true });
+    }
   }
 
   refresh();

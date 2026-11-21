@@ -72,7 +72,7 @@ pizzaiolo's phone; joining returns a **guest key** that stays in that browser. B
 
 | | |
 |---|---|
-| `GET /p/{code}` | the guests' page (one HTML page with its script and style under `/party/`), served with a strict Content-Security-Policy |
+| `GET /p/{code}` | the guests' page (one HTML page with its scripts and style under `/party/`), served with a strict Content-Security-Policy. Each menu pizza is drawn in the browser from its name and note, with an icon per ingredient; guests swipe through the menu or search it by pizza or ingredient |
 | `POST /parties` | a new night: title, host name, when, note, menu, things to bring, spare balls → the night, its host key |
 | `GET /parties/{code}` | the night, and who is asking (guest id, host or not) |
 | `PUT`/`DELETE /parties/{code}`, `POST /parties/{code}/stage` | host: edit (orders of pizzas that stay are kept), delete, `ORDERS` → `BAKING` → `DONE` |
