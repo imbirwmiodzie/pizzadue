@@ -52,18 +52,29 @@ class PartyClient(baseUrl: String) {
                 text
             } catch (e: IOException) {
                 throw unreachable
+            } catch (e: SecurityException) {
+                // no network permission, or a policy on the phone blocks this app
+                throw PartyException("This phone does not let the app use the internet.")
             } finally {
                 c.disconnect()
             }
         }
 
     private suspend fun call(method: String, path: String, key: String? = null) = call<Unit>(method, path, key)
-    private fun party(body: String) = json.decodeFromString(Party.serializer(), body)
+
+    /** An answer that is not what this app expects (another server at that address, an old version) is one sentence too. */
+    private fun <T> decode(s: KSerializer<T>, body: String): T = try {
+        json.decodeFromString(s, body)
+    } catch (e: IllegalArgumentException) {
+        throw PartyException("The server's answer makes no sense to the app. Is that the right address?")
+    }
+
+    private fun party(body: String) = decode(Party.serializer(), body)
 
     suspend fun create(draft: PartyDraft): PartyCreated =
-        json.decodeFromString(PartyCreated.serializer(), call("POST", "/parties", null, PartyDraft.serializer(), draft))
+        decode(PartyCreated.serializer(), call("POST", "/parties", null, PartyDraft.serializer(), draft))
 
-    suspend fun view(code: String, key: String?): PartyView = json.decodeFromString(PartyView.serializer(), call("GET", "/parties/$code", key))
+    suspend fun view(code: String, key: String?): PartyView = decode(PartyView.serializer(), call("GET", "/parties/$code", key))
 
     suspend fun update(code: String, key: String, draft: PartyDraft) = party(call("PUT", "/parties/$code", key, PartyDraft.serializer(), draft))
 
@@ -87,5 +98,5 @@ class PartyClient(baseUrl: String) {
 
     // ---- what a friend's browser does; the app only needs these in its tests ----
     suspend fun join(code: String, name: String): Joined =
-        json.decodeFromString(Joined.serializer(), call("POST", "/parties/$code/join", null, JoinRequest.serializer(), JoinRequest(name)))
+        decode(Joined.serializer(), call("POST", "/parties/$code/join", null, JoinRequest.serializer(), JoinRequest(name)))
 }
