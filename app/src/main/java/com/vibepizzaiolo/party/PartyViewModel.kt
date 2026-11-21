@@ -86,6 +86,9 @@ class PartyViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun say(text: String) = _ui.update { it.copy(message = text, busy = false) }
+
+    /** Whatever else goes wrong talking to the server is a line on screen, never a crash. */
+    private fun unexpected(e: Exception) = "Something went wrong (${e.javaClass.simpleName})."
     fun messageShown() = _ui.update { it.copy(message = null) }
 
     /** Runs [block] with the open night; what the server refuses becomes one line on screen. */
@@ -100,6 +103,8 @@ class PartyViewModel(app: Application) : AndroidViewModel(app) {
             throw e
         } catch (e: PartyException) {
             say(e.message ?: "Something went wrong.")
+        } catch (e: Exception) {
+            say(unexpected(e))
         } finally {
             _ui.update { it.copy(busy = false) }
         }
@@ -124,6 +129,9 @@ class PartyViewModel(app: Application) : AndroidViewModel(app) {
                     _ui.update { it.copy(loading = false) }
                     if (_ui.value.party == null) say(e.message ?: "Something went wrong.")
                 }
+            } catch (e: Exception) {
+                _ui.update { it.copy(loading = false) }
+                if (_ui.value.party == null) say(unexpected(e))
             }
         }
     }
@@ -175,6 +183,8 @@ class PartyViewModel(app: Application) : AndroidViewModel(app) {
                 throw e
             } catch (e: PartyException) {
                 say(e.message ?: "Something went wrong.")
+            } catch (e: Exception) {
+                say(unexpected(e))
             }
         }
     }
