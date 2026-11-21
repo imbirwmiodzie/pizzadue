@@ -127,8 +127,11 @@ class PartyScreenTest {
         await("form") { ui().form != null && shows("Your name") }
         rule.onNodeWithText("Your name").performTextInput("Marek")
         rule.onNodeWithText("When (e.g. Saturday 19:00)").performTextInput("Saturday 19:00")
+        // each tap moves what is below it, so the next button is only looked for once the page shows the last one
         reach("+ Diavola").performClick()
+        await("Diavola on the menu") { ui().form!!.menu.size == 3 && !shows("+ Diavola") }
         reach("+ Wine").performClick()
+        await("wine on the list") { ui().form!!.bring.size == 1 && !shows("+ Wine") }
         reach("+ Mozzarella").performClick()
         await("menu of three") { ui().form!!.menu.size == 3 && ui().form!!.bring.size == 2 }
         shot("party-2-form")
