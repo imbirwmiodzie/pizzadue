@@ -49,7 +49,10 @@ import kotlinx.coroutines.launch
 const val BALL_WEIGHT_STEP = 10
 
 @Composable
-fun DoughScreen(s: Settings, voice: VoiceStatus, update: ((Settings) -> Settings) -> Unit, openSettings: () -> Unit) {
+fun DoughScreen(
+    s: Settings, voice: VoiceStatus, update: ((Settings) -> Settings) -> Unit, openSettings: () -> Unit,
+    openSimulator: () -> Unit = {},
+) {
     val r = DoughCalc.calc(s.balls, s.ballWeight.toDouble(), s.hydration.toDouble(), s.salt.toDouble(), s.yeast.toDouble())
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
@@ -96,6 +99,22 @@ fun DoughScreen(s: Settings, voice: VoiceStatus, update: ((Settings) -> Settings
             "TOTAL DOUGH ${Math.round(r.total)} G", color = Pal.muted, fontFamily = Mono, fontSize = 12.sp,
             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End,
         )
+
+        Surface(
+            onClick = openSimulator, shape = RoundedCornerShape(16.dp), color = Pal.card,
+            border = BorderStroke(1.dp, Pal.flame.copy(alpha = 0.5f)), modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Symulator fermentacji", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Ile drożdży i kiedy ciasto będzie gotowe: harmonogram, wzrost, pH i gluten na wykresie",
+                        color = Pal.muted, fontSize = 12.sp,
+                    )
+                }
+                Text("›", color = Pal.flame, fontSize = 26.sp)
+            }
+        }
     }
 }
 

@@ -4,6 +4,7 @@ A voice‑driven pizza timer for Android. Four tabs:
 
 - **Timer**: preheat the oven (30 min), then bake (1:30). Say **“vai!”** / **“waj!”** to start, **“pizza out”** / **“wyjmij”** to stop.
 - **Dough**: dough balls (±1) and ball weight (±10 g) → grams of flour, water, salt and yeast. Hold − / + to step fast.
+  Below it, the **fermentation simulator** (*Symulator fermentacji*, in Polish): a wizard from the schedule to the yeast (see below).
 - **Pizzaioli**: swipe, search and comment other people's pizzas, post yours, and ask a pizzaiolo to eat together (see below).
 - **Serata**: a pizza night with friends: they order through one link in the browser, the app counts the dough and
   keeps the baking queue (see below).
@@ -50,6 +51,26 @@ uploaded. Add `?n=12&bake=92` to the link to print the pizza number and the bake
 and ink (ink lines, hatched shadows, skin and hair in flat washes), cuts it to the shape of your head with your hair and
 puts it on the drawn pizzaiolo, under the toque: your icon on the Timer and in the community, and the chef at the end of
 every reel. A plain wall behind you works best. Everything stays on the phone.
+
+## Fermentation simulator
+
+Dough tab → *Symulator fermentacji*. A five-step wizard, in Polish:
+
+1. **Styl**: a preset (*Neapolitańska tego samego dnia*, *48 h w lodówce*, *Szybka 2 h*, *Nowojorska*) or your own recipe.
+2. **Ciasto**: flour (g) and dough balls, flour strength W 180–380, hydration 55–80 %, salt 0–3.5 %, and optionally
+   sugar, oil and vinegar (teaspoons per 500 g of flour).
+3. **Czas**: any number of stages, each with its hours and temperature (e.g. 2 h at 22 °C → 24 h at 4 °C → 2 h at 22 °C),
+   and the dough's temperature after mixing.
+4. **Drożdże**: fresh, instant or active dry, in % of flour (fresh ≈ 3 × instant, active dry ≈ 1.25–1.5 × instant), or
+   **Policz za mnie**: say in how many hours you bake and it works out the yeast (stretching the schedule's longest stage).
+5. **Wynik**: one chart over the hours since mixing with the room and dough temperature, the rise (%), the pH and a
+   conventional gluten strength, the ready-to-bake window in green and over-fermentation in red (tap or drag to read it),
+   advice (the yeast that would make it ready, the weakest flour that holds), the grams for the batch, short notes on the
+   chemistry, and **Zapisz w Dough**, which sets the Dough tab to the same balls, weight, hydration, salt and yeast.
+
+It is an approximate, educational model, not a simulation of a real dough: yeast activity follows the cardinal temperature
+model (CTMI) with −2 / 33 / 45 °C, the dough's temperature lags the room's by 1.5 h, and the rest is simple formulas tuned to
+rules of thumb. The assumptions are in `app/src/main/java/com/vibepizzaiolo/dough/Fermentation.kt` and on the result screen.
 
 ## Pizzaioli: the community
 

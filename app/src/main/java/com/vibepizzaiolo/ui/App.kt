@@ -17,6 +17,8 @@ import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.LocalPizza
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vibepizzaiolo.community.CommunityViewModel
+import com.vibepizzaiolo.dough.FermentViewModel
+import com.vibepizzaiolo.ui.ferment.FermentWizard
 import com.vibepizzaiolo.ui.community.CommunityScreen
 import com.vibepizzaiolo.party.PartyStage
 import com.vibepizzaiolo.party.PartyViewModel
@@ -66,6 +68,8 @@ fun App(vm: MainViewModel) {
     val context = LocalContext.current
     val community: CommunityViewModel = viewModel()
     val party: PartyViewModel = viewModel()
+    val ferment: FermentViewModel = viewModel()
+    val fermentOpen by ferment.open.collectAsStateWithLifecycle()
     val partyUi by party.ui.collectAsStateWithLifecycle()
     // a pizza night in progress is fetched at once, so the timer can say whose pizza is next
     LaunchedEffect(Unit) { party.start() }
@@ -260,7 +264,15 @@ fun App(vm: MainViewModel) {
                         )
                     }
                 }
-                AppTab.DOUGH -> DoughScreen(settings, voice, vm::updateSettings) { vm.selectTab(AppTab.SETTINGS) }
+                AppTab.DOUGH -> if (fermentOpen) {
+                    FermentWizard(ferment) { d ->
+                        vm.updateSettings { it.copy(balls = d.balls, ballWeight = d.ballWeight, hydration = d.hydration, salt = d.salt, yeast = d.yeast) }
+                        ferment.close()
+                        Toast.makeText(context, "Zapisano w Dough: ${d.balls} × ${d.ballWeight} g", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    DoughScreen(settings, voice, vm::updateSettings, { vm.selectTab(AppTab.SETTINGS) }, ferment::openWizard)
+                }
                 AppTab.PARTY -> PartyScreen(party, settings) { vm.selectTab(AppTab.TIMER) }
                 AppTab.COMMUNITY -> CommunityScreen(community, avatarIcon)
                 AppTab.SETTINGS -> SettingsScreen(
