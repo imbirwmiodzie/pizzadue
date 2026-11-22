@@ -16,6 +16,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ApplicationProvider
 import com.vibepizzaiolo.dough.FermentViewModel
@@ -123,13 +124,13 @@ class FermentWizardScreenTest {
         shot("ferment-5-result")
         scroll(1400f)
         shot("ferment-6-ingredients")
-        rule.onNodeWithText("pH a rozciągliwość").performClick()
+        rule.onNodeWithText("pH a rozciągliwość").performScrollTo().performClick()
         rule.waitForIdle()
         assertTrue(shows("przyjmują protony"))
         scroll(900f)
         shot("ferment-7-chemistry")
 
-        rule.onNodeWithText("Zapisz w Dough").performClick()
+        rule.onNodeWithText("Zapisz w Dough").performClick() // the bottom bar, always on screen
         rule.waitForIdle()
         val s = saved!!
         assertEquals(4, s.balls)
@@ -151,7 +152,7 @@ class FermentWizardScreenTest {
         assertTrue(shows("Przefermentowane"))
         shot("ferment-8-over")
         // the advice sets the yeast that would make it ready at the end
-        rule.onNodeWithText("Żeby było gotowe na koniec", substring = true).performClick()
+        rule.onNodeWithText("Żeby było gotowe na koniec", substring = true).performScrollTo().performClick()
         rule.waitForIdle()
         assertTrue("yeast was ${vm.plan.value.yeastPct}", vm.plan.value.yeastPct < 0.1)
     }
