@@ -139,6 +139,22 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--flame); out
 .pizza.fresh .drop { animation: drop .55s cubic-bezier(.2, .8, .3, 1.3) both; animation-delay: var(--dl, 0ms); }
 @keyframes drop { from { opacity: 0; transform: translateY(-26px) scale(1.7); } 60% { opacity: 1; } }
 
+/* photographed pizzas: they land on the table, turn on it a little faster, and catch the light */
+.spin.real { animation-duration: 48s; }
+.pizza.photo { object-fit: contain; user-select: none; -webkit-user-drag: none; }
+.pizza.photo.fresh { animation: land .7s cubic-bezier(.2, .8, .3, 1.2) both; }
+@keyframes land { from { opacity: .55; transform: translateY(-16px) scale(1.14); } 55% { opacity: 1; } }
+.card.active .art { animation: float 4.8s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-5px) scale(1.018); } }
+.shine { position: absolute; inset: 1%; border-radius: 50%; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .6s; }
+.card.active .shine { opacity: 1; }
+.shine::before {
+  content: ""; position: absolute; inset: -30% -60%; mix-blend-mode: screen;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 236, 200, .2) 47%, rgba(255, 255, 255, .34) 50%, rgba(255, 236, 200, .2) 53%, transparent 62%);
+  transform: translateX(-70%); animation: shine 5.5s ease-in-out infinite;
+}
+@keyframes shine { 0%, 45% { transform: translateX(-70%); } 85%, 100% { transform: translateX(70%); } }
+
 .steam { position: absolute; left: 20%; right: 20%; top: 8%; height: 42%; pointer-events: none; opacity: 0; transition: opacity .6s; }
 .card.active .steam { opacity: 1; }
 .steam i {
@@ -205,7 +221,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--flame); out
 .mini .spin { width: 76px; height: 76px; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .4)); }
 
 @media (prefers-reduced-motion: reduce) {
-  .spin, .steam i, .pizza.fresh .drop, .badge.pop { animation: none; }
+  .spin, .steam i, .pizza.fresh .drop, .pizza.photo.fresh, .card.active .art, .shine::before, .badge.pop { animation: none; }
+  .shine { display: none; }
   .steam { display: none; }
   .roll { transition: none; }
 }

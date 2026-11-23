@@ -1,6 +1,7 @@
 // Pizzas for the guests' page. The pizzaiolo only types a name and a note ("tomato, mozzarella,
 // basil"), so the ingredient icons and the picture of each pizza are read from those words:
-// English, Polish and Italian. Everything is drawn here, as SVG: the page loads nothing else.
+// English, Polish and Italian. A pizza that is one of the photographed classics gets its photo;
+// any other is drawn here, as SVG, from its ingredients.
 (() => {
   'use strict';
 
@@ -142,14 +143,62 @@
     if (!noCheese && !CHEESES.some(k => draw.has(k))) draw.add('mozzarella');
 
     tags.delete('white');
+    const photo = photoFor(fold(pizza.name), draw, negated, dessert ? 'chocolate' : white ? 'white' : 'tomato');
     const words = [pizza.name, pizza.note || ''].concat([...tags.values()].flatMap(e => [e.en, e.pl]));
     const info = {
-      chips, draw, base: dessert ? 'chocolate' : white ? 'white' : 'tomato',
+      chips, draw, photo, base: dessert ? 'chocolate' : white ? 'white' : 'tomato',
       tags: [...tags.values()].map(e => ({ k: e.k, icon: e.icon, label: label(e) })),
       search: fold(words.join(' ')),
     };
     cache.set(id, info);
     return info;
+  }
+
+  // ---- photos: the classics, photographed from above (cut by scripts/pizza_photos/cut.py) ----
+  // [file, name, sauce, what is on it, what may also be on it and still look like this]
+  const PHOTOS = [
+    ['tonno-cipolla', /tonno.*cipoll|cipoll.*tonno/, 'tomato', ['mozzarella', 'tuna', 'onion']],
+    ['salsiccia-funghi', /salsicc.*fungh|fungh.*salsicc|boscaiol/, 'white', ['mozzarella', 'sausage', 'mushroom']],
+    ['margherita', /margherit|bufal/, 'tomato', ['mozzarella']],
+    ['marinara', /marinar/, 'tomato', []],
+    ['diavola', /diavol|pepperon|inferno/, 'tomato', ['mozzarella', 'salami']],
+    ['capricciosa', /capricc|quattro stagion|4 stagion|cztery por/, 'tomato', ['mozzarella', 'ham', 'mushroom', 'artichoke', 'olive']],
+    ['quattro-formaggi', /quattro formagg|4 formagg|cztery ser|four chees/, 'white', ['four', 'mozzarella', 'cheese', 'blue', 'parmesan']],
+    ['hawaii', /hawa/, 'tomato', ['mozzarella', 'ham', 'pineapple']],
+    ['nutella', /nutell/, 'chocolate', [], ['nuts', 'strawberry', 'cream', 'dessert']],
+    ['tonno', /^tonno$|^tuna$|^tunczyk$/, 'tomato', ['mozzarella', 'tuna']],
+    ['salsiccia', /salsicc/, 'tomato', ['mozzarella', 'sausage']],
+    ['guanciale-cipolla', /amatrician|guancial/, 'tomato', ['mozzarella', 'bacon', 'onion'], ['parmesan']],
+    ['rucola-grana', /rucol|rukol|rocket/, 'white', ['mozzarella', 'rocket', 'parmesan']],
+  ].map(([file, name, sauce, on, may]) => ({ file, name, sauce, on: new Set(on), may: new Set(may || []) }));
+  // seasoning a photo cannot show, or shows anyway
+  const GARNISH = new Set(['tomato', 'white', 'oil', 'herbs', 'basil', 'chili', 'garlic', 'chocolate']);
+
+  /**
+   * The photo that shows this pizza, or null to draw it. A classic by name gets its photo unless
+   * the note adds something not on it or takes off something that is; otherwise the toppings must
+   * be exactly those on a photo. A note that names no tomato may still be a white pizza.
+   */
+  function photoFor(name, draw, negated, base) {
+    const seen = [...draw].filter(k => !GARNISH.has(k));
+    const sauceFits = ph => ph.sauce === base || (ph.sauce === 'white' && base === 'tomato' && !draw.has('tomato'));
+    const shows = ph => seen.every(k => ph.on.has(k) || ph.may.has(k)) && ![...ph.on].some(k => negated.has(k)) && sauceFits(ph);
+    const named = PHOTOS.find(ph => ph.name.test(name) && shows(ph));
+    if (named) return named.file;
+    const same = PHOTOS.find(ph => shows(ph) && [...ph.on].every(k => draw.has(k)));
+    return same ? same.file : null;
+  }
+
+  /** The picture of a pizza: its photo, or the drawing. Either has class "pizza". */
+  function picture(info, seed) {
+    if (!info.photo) return paint(info, seed);
+    const img = document.createElement('img');
+    img.className = 'pizza photo';
+    img.src = '/party/pizza-' + info.photo + '.webp';
+    img.alt = '';
+    img.draggable = false;
+    img.decoding = 'async';
+    return img;
   }
 
   // ---- drawing ----
@@ -409,5 +458,5 @@
       GLYPHS[name].map(d => s('path', { d, fill: 'none', stroke: 'currentColor', 'stroke-width': '2.2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })));
   }
 
-  window.VPPizza = { analyze, paint, icon, glyph, fold, seedOf };
+  window.VPPizza = { analyze, paint, picture, icon, glyph, fold, seedOf, photos: PHOTOS.map(ph => ph.file) };
 })();

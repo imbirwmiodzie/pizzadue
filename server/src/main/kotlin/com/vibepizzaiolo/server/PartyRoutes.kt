@@ -32,16 +32,22 @@ private object GuestPage {
         "pizza.js" to (ContentType.Text.JavaScript to load("pizza.js")),
         "app.css" to (ContentType.Text.CSS to load("app.css")),
         "icon.svg" to (ContentType.Image.SVG to load("icon.svg")),
-    )
+    ) + PIZZA_PHOTOS.associate { "pizza-$it.webp" to (ContentType("image", "webp") to load("pizza-$it.webp")) }
 }
 
-private suspend fun ApplicationCall.page(type: ContentType, bytes: ByteArray) {
+/** The photographed pizzas (scripts/pizza_photos), the same list as PHOTOS in pizza.js. */
+val PIZZA_PHOTOS = listOf(
+    "margherita", "marinara", "diavola", "capricciosa", "quattro-formaggi", "hawaii", "nutella",
+    "tonno", "tonno-cipolla", "salsiccia", "salsiccia-funghi", "guanciale-cipolla", "rucola-grana",
+)
+
+private suspend fun ApplicationCall.page(type: ContentType, bytes: ByteArray, cache: String = "no-cache") {
     // nothing but this server's own files runs or loads on the page
     response.header("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'")
     response.header("X-Content-Type-Options", "nosniff")
     response.header("Referrer-Policy", "no-referrer")
-    response.header(HttpHeaders.CacheControl, "no-cache")
-    respondBytes(bytes, type.withParameter("charset", "utf-8"))
+    response.header(HttpHeaders.CacheControl, cache)
+    respondBytes(bytes, if (type.contentType == "image" && type.contentSubtype == "webp") type else type.withParameter("charset", "utf-8"))
 }
 
 fun Application.partyRoutes(service: PartyService) {
@@ -49,8 +55,10 @@ fun Application.partyRoutes(service: PartyService) {
         // the link friends get: https://server/p/<code>
         get("/p/{code}") { call.page(ContentType.Text.Html, GuestPage.html) }
         get("/party/{file}") {
-            val (type, bytes) = GuestPage.files[call.param("file")] ?: refuse(HttpStatusCode.NotFound, "No such file.")
-            call.page(type, bytes)
+            val file = call.param("file")
+            val (type, bytes) = GuestPage.files[file] ?: refuse(HttpStatusCode.NotFound, "No such file.")
+            // a photo is kept a day, instead of asked for again on every redraw of the menu
+            call.page(type, bytes, if (file.endsWith(".webp")) "public, max-age=86400" else "no-cache")
         }
 
         // starting a night needs no account, so it is slowed down per address like sign-up

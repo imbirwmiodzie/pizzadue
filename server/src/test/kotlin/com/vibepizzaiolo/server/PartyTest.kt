@@ -23,6 +23,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.readRawBytes
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
@@ -289,6 +290,19 @@ class PartyTest {
         assertEquals("default-src 'self'; frame-ancestors 'none'", page.headers["Content-Security-Policy"])
         assertTrue(page.headers["Content-Type"]!!.startsWith("text/html"))
         for (file in listOf("app.js", "pizza.js", "app.css", "icon.svg")) assertEquals(HttpStatusCode.OK, client.get("/party/$file").status, file)
+        // every photographed pizza pizza.js can show is served, as a picture the browser may keep
+        val pizzaJs = client.get("/party/pizza.js").bodyAsText()
+        val inJs = Regex("""\['([a-z-]+)', /""").findAll(pizzaJs.substringAfter("const PHOTOS = [").substringBefore("].map(")).map { it.groupValues[1] }.toSet()
+        assertEquals(PIZZA_PHOTOS.toSet(), inJs)
+        for (name in PIZZA_PHOTOS) {
+            val photo = client.get("/party/pizza-$name.webp")
+            assertEquals(HttpStatusCode.OK, photo.status, name)
+            assertEquals("image/webp", photo.headers["Content-Type"], name)
+            assertEquals("public, max-age=86400", photo.headers["Cache-Control"], name)
+            val bytes = photo.readRawBytes()
+            assertEquals("RIFF", String(bytes, 0, 4), name)
+            assertEquals("WEBP", String(bytes, 8, 4), name)
+        }
         assertEquals(HttpStatusCode.NotFound, client.get("/party/../logback.xml").status)
         assertEquals(HttpStatusCode.NotFound, client.get("/party/index.html").status)
     }

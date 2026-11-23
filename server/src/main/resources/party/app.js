@@ -310,7 +310,7 @@
     return h('div', { class: 'minis', 'aria-hidden': 'true' }, mine.map(o => {
       const p = party.menu.find(m => m.id === o.pizzaId);
       if (!p) return null;
-      return h('div', { class: 'mini' }, h('div', { class: 'spin' }, P.paint(P.analyze(p, LANG), P.seedOf(p.id + p.name))), o.count > 1 ? '×' + o.count : '');
+      return h('div', { class: 'mini' }, h('div', { class: 'spin' }, P.picture(P.analyze(p, LANG), P.seedOf(p.id + p.name))), o.count > 1 ? '×' + o.count : '');
     }));
   }
 
@@ -323,23 +323,25 @@
       h('div', { class: 'yours' }, party.title + ' · ' + T.baked(baked)))];
   }
 
-  // ---- the menu: a row of pizzas to swipe through, drawn from their ingredients ----
+  // ---- the menu: a row of pizzas to swipe through, photographed or drawn from their ingredients ----
   const matches = (search, words) => words.every(w => search.includes(w));
   const words = () => P.fold(query).trim().split(/\s+/).filter(Boolean);
 
   function card(p, counts, total) {
     const info = P.analyze(p, LANG);
     const n = counts ? counts[p.id] || 0 : 0;
-    const svg = P.paint(info, P.seedOf(p.id + p.name));
-    // toppings fall the first time a pizza comes into view, never again on a redraw
-    if (!seen.has(p.id) && !still() && 'IntersectionObserver' in window) svg.classList.add('waiting');
-    const spin = h('div', { class: 'spin' }, svg);
-    spin.style.animationDelay = '-' + ((Date.now() / 1000) % 120).toFixed(2) + 's';
+    const art = P.picture(info, P.seedOf(p.id + p.name));
+    // the first time a pizza comes into view its toppings fall, or its photo lands; never again on a redraw
+    if (!seen.has(p.id) && !still() && 'IntersectionObserver' in window) art.classList.add('waiting');
+    const spin = h('div', { class: 'spin' + (info.photo ? ' real' : '') }, art);
+    // a redraw carries on the turn where it was: the turntable's period, from the clock
+    spin.style.animationDelay = '-' + ((Date.now() / 1000) % (info.photo ? 48 : 120)).toFixed(2) + 's';
     const popped = counts && drawnCounts && (drawnCounts[p.id] || 0) !== n;
     const q = words();
     return h('article', { class: 'card' + (n > 0 ? ' mine' : ''), 'data-id': p.id, 'data-search': info.search, 'aria-label': p.name, hidden: !matches(info.search, q) },
       h('div', { class: 'art' },
         h('div', { class: 'roll' }, spin),
+        info.photo && h('div', { class: 'shine', 'aria-hidden': 'true' }),
         h('div', { class: 'steam', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')),
         n > 0 && h('span', { class: 'badge' + (popped ? ' pop' : '') }, '×' + n)),
       h('h3', null, p.name),
