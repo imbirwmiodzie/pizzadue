@@ -2,7 +2,7 @@
 
 A voice‑driven pizza timer for Android. Four tabs:
 
-- **Timer**: preheat the oven (30 min), then bake (1:30). Say **“vai!”** / **“waj!”** to start, **“pizza out”** / **“wyjmij”** to stop.
+- **Timer**: preheat the oven (30 min), then bake (1:30). Say **“ciao pizza start”** to start and **“ciao pizza stop”** to stop (see [Voice commands](#voice-commands)).
 - **Dough**: dough balls (±1) and ball weight (±10 g) → grams of flour, water, salt and yeast. Hold − / + to step fast.
   Below it, the **fermentation simulator** (*Symulator fermentacji*, in Polish): a wizard from the schedule to the yeast (see below).
 - **Pizzaioli**: swipe, search and comment other people's pizzas, post yours, and ask a pizzaiolo to eat together (see below).
@@ -103,7 +103,7 @@ through a link, without installing anything:
    with flour, water, salt and yeast from your Dough settings); one tap sets the Dough tab to that number of balls.
 3. **The bake**: *Close orders · start the bake*. Friends' phones now show only “The bake is on. Put your phone away.”
    Your phone shows the queue: the test pizza first, then one pizza each before anybody gets a second. The Timer tab
-   says whose pizza is next, and every finished bake (“pizza out”) ticks the next one by itself; taps on the queue
+   says whose pizza is next, and every finished bake (“ciao pizza stop”) ticks the next one by itself; taps on the queue
    correct it.
 4. **After**: *Finish the night*; the link then says grazie.
 
@@ -112,11 +112,11 @@ The guests' page speaks Polish or English, whichever the phone is set to. This t
 
 ## How it sounds
 
-A long beep marks every start. Bake (counted from “vai!”): 1 short tick at :15, 2 at :30, 3 at :45, one long tick on every full minute.
-“Gira, gira!” at half time. At the end “La pizza è pronta!” repeats every 10 s until you say “pizza out” / “wyjmij”.
+A long beep marks every start. Bake (counted from “ciao pizza start”): 1 short tick at :15, 2 at :30, 3 at :45, one long tick on every full minute.
+“Gira, gira!” at half time. At the end “La pizza è pronta!” repeats every 10 s until you say “ciao pizza stop”.
 
 Preheat: silent except 1 tick at ⅓, 2 ticks at ⅔, 3 ticks at the end, then “Forno a legna caldo” every 30 s
-until you say “vai!” or stop it. The timer then switches to Bake.
+until you say “ciao pizza start” or stop it. The timer then switches to Bake.
 
 Loudness: by default everything plays as an alarm sound, so it is heard even when the phone is on silent and always
 comes from the phone's speaker; **Play as alarm** off switches to media sound (media volume, Bluetooth/headphones). **Beep volume**
@@ -127,16 +127,22 @@ while the app is open, and vibration and a flashlight blink per tick can be turn
 
 ## Voice commands
 
-Voice only starts and stops the timer. Offline (Vosk), English and Polish listening at the same time,
-only while the app is open. There are no spoken replies: a long beep confirms the start.
+Voice only starts and stops the timer. Offline (Vosk), only while the app is open. There are no spoken replies:
+a long beep confirms the start.
 
-| Action | English | Polski |
-|---|---|---|
-| Start the timer (preheat or bake, whichever is selected) | vai!, waj!*, pizza in, start | start |
-| Stop the timer or the end call | pizza out, stop | wyjmij, stop, koniec |
+| Action | Say |
+|---|---|
+| Start the timer (preheat or bake, whichever is selected) | **ciao pizza start** |
+| Stop the timer or the end call | **ciao pizza stop** |
 
-\* “vai” and “waj” are not words in either speech model. The English model hears them as “vie”, which sounds the same,
-so the English list needs to be on for “vai!” to work.
+Like “OK Google”, the three words have to come in a row: a lone “start” or “stop” does nothing, so the radio can no
+longer turn the timer off and on. An English and a Polish model listen at the same time; both know all three words, so
+the phrases are the same in both. When the two disagree (one hears “start”, the other “stop”), the surer one wins.
+Settings → Voice commands turns either off; both on hears you best.
+
+Tested on synthetic speech (5 voices, 3 speeds) through the app's listening loop: the old commands (“vai!”, “stop”,
+“start”, “wyjmij”, “koniec”…) were triggered 47 times by 2½ minutes of English and Polish radio talk, “ciao pizza …”
+never. The phrase was heard 30/30 in quiet, 27/30 with an extractor fan behind and 25/30 over a radio at 10 dB.
 
 ## Build locally
 

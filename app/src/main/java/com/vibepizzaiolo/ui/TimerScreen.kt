@@ -105,7 +105,7 @@ private fun SilenceOverlay(alert: Alert, onSilence: () -> Unit) {
                 color = Pal.fg, fontSize = 18.sp, modifier = Modifier.padding(top = 16.dp),
             )
             Text(
-                "or press a volume button, or say “stop”",
+                "or press a volume button, or say “ciao pizza stop”",
                 color = Pal.muted, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp),
             )
         }

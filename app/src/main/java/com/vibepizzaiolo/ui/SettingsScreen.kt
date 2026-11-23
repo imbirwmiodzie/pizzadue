@@ -122,13 +122,18 @@ fun SettingsScreen(
 
 
         SectionLabel("Voice commands")
+        Text(
+            "Say “ciao pizza start” or “ciao pizza stop”, in one go. A lone “start” or “stop”, from you or the radio, does nothing.",
+            color = Pal.fg, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+        )
         Group {
-            SwitchRow("English", "start: vai! · waj! · pizza in · start   stop: pizza out · stop", s.voiceEn, { v -> update { it.copy(voiceEn = v) } })
+            SwitchRow("English", "listens for English pronunciation", s.voiceEn, { v -> update { it.copy(voiceEn = v) } })
             GroupDivider()
-            SwitchRow("Polski", "start: start   stop: wyjmij · stop · koniec", s.voicePl, { v -> update { it.copy(voicePl = v) } })
+            SwitchRow("Polski", "słucha polskiej wymowy", s.voicePl, { v -> update { it.copy(voicePl = v) } })
         }
         val status = when (voice) {
-            is VoiceStatus.Listening -> "Listening, offline."
+            is VoiceStatus.Listening -> if (voice.langs.size > 1) "Listening, offline. Both together hear you best."
+            else "Listening, offline. Turning both on hears you better in a noisy kitchen."
             VoiceStatus.Preparing -> "Preparing the speech models (first start only)…"
             VoiceStatus.NoPermission -> "Microphone permission is off. Allow it in Android settings → Apps → VibePizzaiolo."
             is VoiceStatus.Error -> voice.message
