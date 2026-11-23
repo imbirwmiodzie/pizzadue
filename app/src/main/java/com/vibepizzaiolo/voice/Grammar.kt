@@ -1,41 +1,48 @@
 package com.vibepizzaiolo.voice
 
 /**
- * Every phrase the app reacts to, per language. The same list is handed to the speech
- * recogniser as its grammar and used to turn recognised text back into a [Command],
- * so the two can never drift apart. A short list keeps recognition reliable in a noisy kitchen.
+ * The phrases the app reacts to: "ciao pizza" and then the command, like "OK Google".
+ *
+ * Single words such as "stop" and "start" came out of the radio dozens of times a minute,
+ * so on its own a word does nothing: the three words have to come in a row. Both speech
+ * models (English and Polish) know all three words, so the same phrases work in both.
+ *
+ * The same list is handed to the speech recogniser as its grammar and used to turn
+ * recognised words back into a [Command], so the two can never drift apart.
  */
 object Grammar {
-    val en: Map<String, Command> = linkedMapOf(
-        // "vai" and "waj" are not English words; "vie" is pronounced exactly like them.
-        "vie" to Command.START,
-        "pizza in" to Command.START,
-        "start" to Command.START,
-        "pizza out" to Command.STOP,
-        "stop" to Command.STOP,
+    const val WAKE = "ciao pizza"
+
+    val phrases: Map<String, Command> = linkedMapOf(
+        "$WAKE start" to Command.START,
+        "$WAKE stop" to Command.STOP,
     )
 
-    val pl: Map<String, Command> = linkedMapOf(
-        "start" to Command.START,
-        "wyjmij" to Command.STOP,
-        "stop" to Command.STOP,
-        "koniec" to Command.STOP,
-    )
+    /** One recognised word and how sure the recogniser is of it (0..1). */
+    data class Word(val word: String, val conf: Double = 1.0)
 
-    fun phrases(lang: Lang): Map<String, Command> = if (lang == Lang.EN) en else pl
+    /** A command heard, with the confidence of its least certain word. */
+    data class Heard(val command: Command, val confidence: Double)
 
-    /** Grammar JSON for the recogniser: all phrases plus "[unk]" to soak up everything else. */
-    fun recognizerGrammar(lang: Lang): String =
-        (phrases(lang).keys + "[unk]").joinToString(",", "[", "]") { "\"$it\"" }
+    /** Grammar JSON for the recogniser: the phrases plus "[unk]" to soak up everything else. */
+    fun recognizerGrammar(): String =
+        (phrases.keys + "[unk]").joinToString(",", "[", "]") { "\"$it\"" }
 
-    /** Recognised text -> command: the longest known phrase found in the text on word boundaries. */
-    fun parse(text: String, lang: Lang): Command? {
-        val clean = text.lowercase().replace("[unk]", " ").split(Regex("\\s+")).filter { it.isNotBlank() }.joinToString(" ")
-        if (clean.isEmpty()) return null
-        val padded = " $clean "
-        return phrases(lang).entries
-            .filter { padded.contains(" ${it.key} ") }
-            .maxByOrNull { it.key.length }
-            ?.value
+    /**
+     * Recognised words -> command: a phrase as three words in a row, anywhere in what was heard.
+     * Its confidence is that of its least certain word, so a mumble around it does not count.
+     * If both phrases are in there, the surer one wins.
+     */
+    fun parse(words: List<Word>): Heard? {
+        val w = words.map { it.copy(word = it.word.lowercase()) }
+        val size = phrases.keys.first().split(' ').size
+        return (0..w.size - size).mapNotNull { i ->
+            val run = w.subList(i, i + size)
+            phrases[run.joinToString(" ") { it.word }]?.let { Heard(it, run.minOf { word -> word.conf }) }
+        }.maxByOrNull { it.confidence }
     }
+
+    /** Recognised text -> command, every word taken as certain. */
+    fun parse(text: String): Command? =
+        parse(text.split(Regex("\\s+")).filter { it.isNotBlank() }.map { Word(it) })?.command
 }

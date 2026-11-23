@@ -36,12 +36,13 @@ sealed interface VoiceStatus {
 
 /**
  * Listens continuously while the app is open. One microphone stream feeds an English
- * and a Polish recogniser at once; each only knows the phrases in [Grammar].
+ * and a Polish recogniser at once; each only knows the phrases in [Grammar]
+ * ("ciao pizza start", "ciao pizza stop"). When they disagree, the surer one wins ([Referee]).
  */
 class VoiceController(
     private val context: Context,
     private val scope: CoroutineScope,
-    private val onCommand: (Command, Lang, String) -> Unit,
+    private val onCommand: (Command) -> Unit,
 ) {
     private val _status = MutableStateFlow<VoiceStatus>(VoiceStatus.Off)
     val status: StateFlow<VoiceStatus> = _status.asStateFlow()
@@ -62,7 +63,7 @@ class VoiceController(
                 if (Models.loaded.keys.containsAll(langs).not()) _status.value = VoiceStatus.Preparing
                 val recognizers = langs.mapNotNull { lang ->
                     val model = Models.get(context, lang) ?: return@mapNotNull null
-                    lang to Recognizer(model, SAMPLE_RATE.toFloat(), Grammar.recognizerGrammar(lang)).apply { setWords(true) }
+                    lang to Recognizer(model, SAMPLE_RATE.toFloat(), Grammar.recognizerGrammar()).apply { setWords(true) }
                 }
                 if (recognizers.isEmpty()) {
                     _status.value = VoiceStatus.Error("Speech models are missing from this build")
@@ -96,6 +97,8 @@ class VoiceController(
         }
         val buf = ShortArray(SAMPLE_RATE / 10) // 100 ms
         var wasMuted = false
+        val referee = Referee(recognizers.size, SETTLE_SAMPLES)
+        var heardSamples = 0L
         try {
             record.startRecording()
             _status.value = VoiceStatus.Listening(recognizers.map { it.first }.toSet())
@@ -105,14 +108,19 @@ class VoiceController(
                 if (n <= 0) continue
                 if (MicGate.isMuted) {
                     // the app itself is talking: do not listen to it
-                    if (!wasMuted) recognizers.forEach { it.second.reset() }
+                    if (!wasMuted) {
+                        recognizers.forEach { it.second.reset() }
+                        referee.reset()
+                    }
                     wasMuted = true
                     continue
                 }
                 wasMuted = false
+                heardSamples += n
                 for ((lang, rec) in recognizers) {
-                    if (rec.acceptWaveForm(buf, n)) handle(lang, rec.result)
+                    if (rec.acceptWaveForm(buf, n)) heard(rec.result)?.let { referee.offer(it, lang, heardSamples) }
                 }
+                referee.decide(heardSamples)?.let { act(it) }
             }
         } finally {
             runCatching { record.stop() }
@@ -121,24 +129,25 @@ class VoiceController(
         }
     }
 
-    private suspend fun handle(lang: Lang, json: String) {
-        val obj = runCatching { JSONObject(json) }.getOrNull() ?: return
-        val text = obj.optString("text").trim()
-        if (text.isEmpty() || text == "[unk]") return
-        // average word confidence: drop guesses forced out of random kitchen noise
-        val words = obj.optJSONArray("result")
-        if (words != null && words.length() > 0) {
-            var sum = 0.0
-            for (i in 0 until words.length()) sum += words.getJSONObject(i).optDouble("conf", 1.0)
-            if (sum / words.length() < MIN_CONFIDENCE) return
+    /** Recogniser result JSON -> the command in it, if it is sure enough of every word of the phrase. */
+    private fun heard(json: String): Grammar.Heard? {
+        val obj = runCatching { JSONObject(json) }.getOrNull() ?: return null
+        val list = obj.optJSONArray("result") ?: return null
+        val words = (0 until list.length()).map {
+            val w = list.getJSONObject(it)
+            Grammar.Word(w.optString("word"), w.optDouble("conf", 1.0))
         }
-        val cmd = Grammar.parse(text, lang) ?: return
+        // drop guesses forced out of kitchen noise
+        return Grammar.parse(words)?.takeIf { it.confidence >= MIN_CONFIDENCE }
+    }
+
+    private suspend fun act(heard: Grammar.Heard) {
         val now = SystemClock.elapsedRealtime()
-        // both recognisers may hear the same words; act once
-        if (cmd == lastCommand && now - lastCommandAt < 2000) return
-        lastCommand = cmd
+        // the same command said twice in a row: act once
+        if (heard.command == lastCommand && now - lastCommandAt < 2000) return
+        lastCommand = heard.command
         lastCommandAt = now
-        withContext(Dispatchers.Main) { onCommand(cmd, lang, text) }
+        withContext(Dispatchers.Main) { onCommand(heard.command) }
     }
 
     /** Loaded models stay in memory for the life of the process; loading takes a few seconds. */
@@ -156,6 +165,9 @@ class VoiceController(
     private companion object {
         const val TAG = "VibePizzaioloVoice"
         const val SAMPLE_RATE = 16_000
+        /** Lowest confidence of a phrase's words; tested on synthetic speech with radio and fan noise behind. */
         const val MIN_CONFIDENCE = 0.6
+        /** How long the second recogniser may take to give its verdict on the same words: 1 s. */
+        const val SETTLE_SAMPLES = SAMPLE_RATE.toLong()
     }
 }

@@ -613,7 +613,7 @@
     c.fillText('VibePizzaiolo', cx, 520);
     c.fillStyle = C.flame;
     c.font = font(38, true);
-    c.fillText('The voice pizza timer · say “vai!”', cx, 590);
+    c.fillText('The voice pizza timer · say “ciao pizza”', cx, 590);
     c.restore();
 
     // the pizzaiolo slides up and waves

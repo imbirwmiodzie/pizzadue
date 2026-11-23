@@ -131,7 +131,7 @@ class TimerService : Service() {
             }
             Cue.PreheatDone -> {
                 if (s.ticks) player.ticks(3)
-                // oven is hot: switch to bake, ready for "vai!"
+                // oven is hot: switch to bake, ready for "ciao pizza start"
                 TimerRepository.update {
                     TimerState(mode = Mode.BAKE, phase = Phase.IDLE, durationMs = s.bakeSec * 1000L, alert = Alert.FORNO)
                 }
@@ -143,7 +143,7 @@ class TimerService : Service() {
     }
 
     /**
-     * Plays a voice clip [times] times, [everyMs] apart, unless stopped or "vai!" comes first.
+     * Plays a voice clip [times] times, [everyMs] apart, unless stopped or "ciao pizza start" comes first.
      * The caller has already set the alert in the state; only an older alert's job is cancelled
      * here, never the state (clearing it hid the "silence" control while the call kept playing).
      */
@@ -195,7 +195,7 @@ class TimerService : Service() {
         cancelAlert()
         player.silence()
         val st = TimerRepository.state.value
-        // "pizza out" before the time is up still counts as a pizza, if it was really in the oven
+        // "ciao pizza stop" before the time is up still counts as a pizza, if it was really in the oven
         if (st.mode == Mode.BAKE && st.isActive) {
             val baked = if (st.phase == Phase.RUNNING) elapsedBefore + (SystemClock.elapsedRealtime() - startedAt) else elapsedBefore
             if (baked >= 20_000L) recordBake(baked)
@@ -211,7 +211,7 @@ class TimerService : Service() {
         player.timerStopped()
         releaseWake()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-        // only stop if no newer start arrived meanwhile (a quick "stop" then "vai!" must not kill the new timer)
+        // only stop if no newer start arrived meanwhile (a quick stop then start must not kill the new timer)
         stopSelfResult(lastStartId)
     }
 

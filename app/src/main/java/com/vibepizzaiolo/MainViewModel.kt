@@ -74,7 +74,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _tab = MutableStateFlow(AppTab.TIMER)
     val tab: StateFlow<AppTab> = _tab.asStateFlow()
 
-    val voice = VoiceController(app, viewModelScope) { cmd, _, _ -> onCommand(cmd) }
+    val voice = VoiceController(app, viewModelScope) { cmd -> onCommand(cmd) }
     val voiceStatus: StateFlow<VoiceStatus> = voice.status
 
     private var foreground = false
@@ -269,8 +269,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun onCommand(cmd: Command) {
         val st = timer.value
         when (cmd) {
-            // already running: ignore, so a second "vai!" never restarts the bake by accident
-            // finished ("pronta!") counts as not running: "vai!" starts the next pizza
+            // already running: ignore, so a second "ciao pizza start" never restarts the bake by accident
+            // finished ("pronta!") counts as not running: "ciao pizza start" starts the next pizza
             Command.START -> if (!st.isActive) {
                 _tab.value = AppTab.TIMER
                 startCurrent()

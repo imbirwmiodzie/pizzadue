@@ -357,7 +357,7 @@ class VideoMaker(private val context: Context) {
         c.saveLayerAlpha(null, (255 * k).toInt())
         CardRenderer.drawLogo(c, cx - 70f, 270f, 140f, 0xFFFFB020.toInt())
         c.drawText("VibePizzaiolo", cx, 520f, paint(104f, 0xFFF3EFE6.toInt(), bold, Paint.Align.CENTER))
-        c.drawText("The voice pizza timer · say “vai!”", cx, 590f, paint(38f, 0xFFFFB020.toInt(), monoBold, Paint.Align.CENTER))
+        c.drawText("The voice pizza timer · say “ciao pizza”", cx, 590f, paint(38f, 0xFFFFB020.toInt(), monoBold, Paint.Align.CENTER))
         c.restore()
 
         // pizzaiolo slides up and waves
