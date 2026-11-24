@@ -107,6 +107,12 @@ through a link, without installing anything:
    correct it.
 4. **After**: *Finish the night*; the link then says grazie.
 
+Pizzas that are photographed classics show their photo (Margherita, Marinara, Diavola, Capricciosa, Quattro formaggi,
+Hawaii, Nutella, Tonno, Tonno e cipolla, Salsiccia, Salsiccia e funghi, Amatriciana, Rucola e grana): picked by the name,
+or by exactly the same toppings, and never when the note adds or takes off something the photo shows. Any other pizza
+is drawn from its ingredients. The pizza in the middle floats, turns slowly and catches the light. The photos are cut out
+of `scripts/pizza_photos/menu-*.jpg` by `scripts/pizza_photos/cut.py`.
+
 The guests' page speaks Polish or English, whichever the phone is set to. This tab is separate from **Pizzaioli**
 (the public community with swiping); the two only share the server address.
 
