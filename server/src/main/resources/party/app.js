@@ -210,7 +210,7 @@
     const el = document.createElement(tag);
     for (const [k, v] of Object.entries(props || {})) {
       if (k === 'class') el.className = v;
-      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else if (k.startsWith('on')) el[k] = v;
       else if (k === 'value') el.value = v;
       else if (v === true) el.setAttribute(k, '');
       else if (v !== false && v != null) el.setAttribute(k, v);
@@ -334,13 +334,14 @@
     // the first time a pizza comes into view its toppings fall, or its photo lands; never again on a redraw
     if (!seen.has(p.id) && !still() && 'IntersectionObserver' in window) art.classList.add('waiting');
     const spin = h('div', { class: 'spin' + (info.photo ? ' real' : '') }, art);
+    const same = info.photo || [info.base, ...[...info.draw].sort()].join(',');
     // a redraw carries on the turn where it was: the turntable's period, from the clock
     spin.style.animationDelay = '-' + ((Date.now() / 1000) % (info.photo ? 48 : 120)).toFixed(2) + 's';
     const popped = counts && drawnCounts && (drawnCounts[p.id] || 0) !== n;
     const q = words();
     return h('article', { class: 'card' + (n > 0 ? ' mine' : ''), 'data-id': p.id, 'data-search': info.search, 'aria-label': p.name, hidden: !matches(info.search, q) },
       h('div', { class: 'art' },
-        h('div', { class: 'roll' }, spin),
+        h('div', { class: 'roll', 'data-keep': p.id + '|' + same }, spin),
         info.photo && h('div', { class: 'shine', 'aria-hidden': 'true' }),
         h('div', { class: 'steam', 'aria-hidden': 'true' }, h('i'), h('i'), h('i')),
         n > 0 && h('span', { class: 'badge' + (popped ? ' pop' : '') }, '×' + n)),
@@ -376,7 +377,7 @@
         h('div', { class: 'carousel' + (many ? '' : ' single') }, party.menu.map(p => card(p, counts, total))),
         many && h('button', { class: 'arrow prev', type: 'button', 'aria-label': T.prev, onclick: () => step(-1) }, P.glyph('prev')),
         many && h('button', { class: 'arrow next', type: 'button', 'aria-label': T.next, onclick: () => step(1) }, P.glyph('next'))),
-      many && h('div', { class: 'dots' }),
+      many && h('div', { class: 'dots', 'data-keep': 'dots' }),
       many && h('div', { class: 'no-match', hidden: true },
         h('p', null), h('button', { class: 'link', type: 'button', onclick: () => { query = ''; const i = document.querySelector('.search input'); if (i) i.value = ''; filter(); } }, T.showAll)));
     if (counts) drawnCounts = Object.assign({}, counts);
@@ -439,7 +440,15 @@
     const box = document.querySelector('.dots');
     if (!box) return;
     const cards = shownCards();
-    box.replaceChildren(...(cards.length > 1 ? cards.map(c => h('button', { class: 'dot', type: 'button', 'aria-label': c.getAttribute('aria-label'), onclick: () => goTo(c) })) : []));
+    // the dots stay where they are, so the one for the pizza in the middle does not shrink and grow again
+    const want = cards.length > 1 ? cards : [];
+    const was = [...box.children];
+    want.forEach((c, i) => {
+      const dot = was[i] || box.appendChild(h('button', { class: 'dot', type: 'button' }));
+      dot.setAttribute('aria-label', c.getAttribute('aria-label'));
+      dot.onclick = () => goTo(c);
+    });
+    was.slice(want.length).forEach(d => d.remove());
   }
 
   /** Cards grow toward the middle and roll as they move; toppings fall when a pizza first shows. */
@@ -468,12 +477,16 @@
       if (next) next.disabled = best < 0 || best >= cards.length - 1;
     };
     el.vpUpdate = update;
-    el.addEventListener('scroll', () => {
-      scrolledAt = Date.now();
-      if (!frame) frame = requestAnimationFrame(() => { frame = 0; update(); });
-    }, { passive: true });
+    if (!el.vpWired) {
+      el.vpWired = true;
+      el.addEventListener('scroll', () => {
+        scrolledAt = Date.now();
+        if (!frame) frame = requestAnimationFrame(() => { frame = 0; el.vpUpdate(); });
+      }, { passive: true });
+    }
+    if (el.vpSeen) el.vpSeen.disconnect();
     if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver(entries => {
+      const io = el.vpSeen = new IntersectionObserver(entries => {
         for (const e of entries) {
           if (!e.isIntersecting) continue;
           const svg = e.target.querySelector('.pizza.waiting');
@@ -486,6 +499,42 @@
     }
     sync();
     update();
+  }
+
+  // ---- a redraw changes the page in place: what did not change does not move ----
+  const HANDLERS = ['onclick', 'oninput', 'onkeydown', 'onsubmit'];
+
+  /** Turns [old] into [nu]; an element for another pizza, or of another kind, is swapped whole. */
+  function morph(old, nu) {
+    if (old.nodeType !== nu.nodeType || old.nodeName !== nu.nodeName ||
+      (old.nodeType === 1 && (old.getAttribute('data-id') || '') !== (nu.getAttribute('data-id') || ''))) {
+      old.replaceWith(nu);
+      return;
+    }
+    if (old.nodeType !== 1) { if (old.nodeValue !== nu.nodeValue) old.nodeValue = nu.nodeValue; return; }
+    // the same pizza, still turning and rolling: left exactly as it is
+    const keep = old.getAttribute('data-keep');
+    if (keep && keep === nu.getAttribute('data-keep')) return;
+    for (const a of [...old.attributes]) {
+      // the carousel sets a card's size and roll as it scrolls: a redraw has no say in it
+      if (!nu.hasAttribute(a.name) && a.name !== 'style') old.removeAttribute(a.name);
+    }
+    for (const a of nu.attributes) {
+      let v = a.value;
+      // which card is in the middle is the carousel's to say, too
+      if (a.name === 'class' && old.classList.contains('active') && old.classList.contains('card')) v += ' active';
+      if (old.getAttribute(a.name) !== v) old.setAttribute(a.name, v);
+    }
+    for (const k of HANDLERS) if (old[k] !== nu[k]) old[k] = nu[k];
+    if ('value' in nu && nu.tagName === 'INPUT' && old !== document.activeElement && old.value !== nu.value) old.value = nu.value;
+    morphKids(old, nu);
+  }
+
+  function morphKids(old, nu) {
+    const was = [...old.childNodes];
+    const now = [...nu.childNodes];
+    now.forEach((kid, i) => { if (i < was.length) morph(was[i], kid); else old.append(kid); });
+    for (let i = now.length; i < was.length; i++) was[i].remove();
   }
 
   function render() {
@@ -503,7 +552,9 @@
       else if (party.stage === 'DONE') kids = doneView();
       else kids = me() ? orderView() : joinView();
     }
-    app.replaceChildren(...kids.flat().filter(k => k && k.nodeType));
+    const next = document.createElement('main');
+    next.append(...kids.flat().filter(k => k && k.nodeType));
+    morphKids(app, next);
     const after = carousel();
     if (after && left != null) after.scrollLeft = left;
     wire();
